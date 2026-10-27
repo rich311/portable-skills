@@ -1,0 +1,416 @@
+---
+name: ship-cards
+description: Take a list of Trello cards (or "everything in Ready To Start"), check each is ready to build, have Sonnet sub-agents implement them in worktrees, verify with lint/typecheck/tests/build, a Playwright run against the dev server with screenshots and pre-push review agents (adversarial code review, security, requirements recheck, plus QA only for complex UI-heavy changes), apply any production migrations or scripts after dry runs and repeated checks, then push, post a short comment on each card with screenshots and test steps, make the card's reviewer its only member and move it to Done, report what changed, then confirm everything is pushed and all worktrees and branches are deleted and list what the user still needs to do. Use when the user asks to "ship", "work", "implement" or "knock out" a set of cards end to end.
+---
+
+# Ship cards end to end
+
+Never use em dashes anywhere (code, commits, Trello text, summaries). Trello
+writes post as the user, so write them in the first person and never name
+the user.
+
+## Project settings
+
+Everything project specific comes from the project's CLAUDE.md (and the docs
+it points to). Before starting, find each of these there; look up what's
+missing (Trello via `trelloReadBoard` / `trelloReadMember` `get_me`, commands
+via `package.json`) and only ask the user for what you can't find:
+- **Trello:** the board, its "Ready To Start", "Doing" and "Done" lists (or
+  the project's equivalents), the user's member id, and the **fallback
+  reviewer** who gets a card when the user created it (if none is named,
+  leave the user as the member).
+- **Repo:** the GitHub `<owner>/<repo>` for commit links, the trunk branch
+  (default `main`), and any long-lived branch that must be kept in sync with
+  it after a push (e.g. `preview` or `staging`; skip the sync if there is
+  none).
+- **Commands:** install, lint, typecheck, unit tests, build, dev server
+  (and which ports agents may use; never the user's own dev port), and the
+  folder unit tests go in.
+- **Design:** the design system or style guide doc, if any.
+- **Test accounts:** non-production logins for each role, where the
+  password comes from (an env var, never printed), and how to reset the test
+  database if there is one.
+- **Database:** production and non-production project ids, how migrations
+  are applied (with a dry run), and how data scripts mark a production run
+  (e.g. `--prod` for a dry run, `--prod --apply` to write).
+
+**Push and production approval.** Only push, or apply production migrations
+or scripts, without asking if the project's CLAUDE.md (or the user, in this
+session) grants standing approval for it; quote that approval before the
+push. Otherwise ask once before step 6 and once before step 5.5. Approval
+never covers force-pushes, rewriting history, or pushing commits that
+aren't from this run. If the permission system blocks an action, do not
+route around it (not via a sub-agent either): give the user the exact
+command to run with `!` and continue once they have.
+
+## 1. Gather and triage the cards
+
+1. Resolve the list. Card names/numbers/URLs from the user, or a whole list
+   (`mcp__trello__get_cards_by_list_id`). Skip Bug-vs-feature filtering unless
+   the user asked for it.
+2. For each card read everything: description, checklists, ALL comments
+   (`trelloReadCard` actions `get`, `list_comments`, `list_attachments`).
+   Later comments can change the spec (e.g. a teammate asking to move a
+   feature).
+3. **Mock-ups.** If a card (description, comments or attachments) links a
+   mock-up (Figma, a prototype URL or similar), read its actual page
+   elements: structure, text, spacing, colors, components. For Figma that
+   means the Figma MCP (`get_design_context`, `get_metadata`,
+   `get_variable_defs`; load the figma-design-to-code skill first). For a web
+   prototype, read the page code or DOM. Never build from a screenshot of a
+   mock alone. Screenshots are for verification, or for development only
+   alongside the page elements. If a mock-up link is present and you can't
+   read its elements at the MCP or page-code level (no access, broken link,
+   tool not connected), STOP that card and mark it Needs input with the
+   reason. Don't guess from the image.
+4. Classify each card:
+   Keep the bar light: the default is to build. Anything with a reasonable
+   default (follow the existing app pattern, match the design system when
+   there's no mock, sensible empty/error states and copy, existing users
+   unchanged) is an assumption, not a blocker. Same bar as `assess-cards`.
+   - **Ready**: the card can be built by making assumptions the creator
+     would most likely agree with and that are cheap to change later. Pass
+     the assumptions to the sub-agent. They don't go in the card comment or
+     the final report, unless one turns out to be out of the ordinary.
+   - **Needs input**: only when it's highly ambiguous or unsafe to guess:
+     the card contradicts itself (or its comments) on what gets built;
+     materially different readings where guessing wrong means real rework;
+     a business, pricing, policy or legal call only the product owners can
+     make; a missing mock the card explicitly relies on, or a linked mock
+     whose elements can't be read (step 1.3); credentials or accounts only
+     the user can create; research spikes; or a production data change where
+     the card is unclear about which rows to change or delete. Do NOT build
+     these. Record the specific questions for the final report.
+   Quick code checks (grep the relevant component) are fine to confirm scope.
+5. Move every Ready card to Doing now.
+
+## 2. Implement with Sonnet sub-agents
+
+- Group cards that touch the same files into one agent (separate commits per
+  card) to reduce merge conflicts; otherwise one agent per card. Launch them
+  in parallel with `Agent` using `model: "sonnet"`, `isolation: "worktree"`,
+  `run_in_background: true`.
+- Every agent prompt must include: the card number, id and full spec
+  (including relevant comments); "read CLAUDE.md and the design system doc
+  first"; "read the card's attachments with mcp__trello__download_attachment
+  if useful; do NOT write to Trello"; worktree setup from the main checkout
+  (e.g. symlink `node_modules` and the local env file, never committed); run
+  the typecheck, lint (must exit 0, no new warnings in touched files) and
+  unit test commands; no dev server, no build; commit as `Card #<n>: ...`
+  with the session's attribution trailer lines; DO NOT push; report root
+  cause, files, SHAs, worktree path/branch, judgment calls, the tests added
+  (file and test names, or why none), and exact Playwright verification
+  steps (URLs, viewport, selectors, test data ids from read-only queries).
+- Every agent prompt must also include the **testing rules**:
+  - **Bug cards: at least one regression unit test, always.** It must fail
+    on the old code and pass with the fix (check by running it before the
+    fix, or by temporarily reverting the fix). If the buggy logic is buried
+    in a component or route, pull it out into a small pure function so it
+    can be unit tested; don't skip the test because the code is hard to reach.
+  - **Feature cards: unit tests where appropriate**, i.e. for new or changed
+    logic: parsing, validation, formatting, filtering and sorting, pricing,
+    credits and permissions checks, state transitions, data mapping. Skip
+    them for pure copy, styling or layout changes.
+  - Unit tests go in the project's unit test folder, named
+    `<topic>-<card number>`, following the existing files there. Keep them
+    fast and offline: no dev server, no network, no database; mock or pass
+    in data.
+  - **Integration, API or end-to-end tests only when really necessary**:
+    for high-risk areas where a unit test can't catch the failure, such as
+    auth and role checks, row-level security and cross-user access, payments
+    and webhooks, account deletion, or outbound emails. Use the project's
+    existing suites, never production. Say in the report why it was needed.
+- If the card has a mock-up, pass the link and the rule from step 1.3: the
+  agent builds from the mock's page elements (Figma MCP or page code), uses
+  screenshots only to check its work, and stops and reports if it can't read
+  the elements.
+- Tell agents to never write to the production database and never trigger
+  real outbound emails, payments or invites to real people during testing.
+  Agents may apply migrations to the non-production database and run
+  scripts' read-only production dry runs. Production migrations and
+  production writes are done by the main session in step 5, never by an
+  agent.
+- New migrations: check the highest migration number on `origin/main` and in
+  other open worktrees, so two runs don't create the same number.
+
+## 3. Review each agent's work
+
+When each report arrives:
+1. Read the actual diff (`git -C <worktree> diff origin/main..HEAD`), not just
+   the report. Check it does what the card asks, follows the design system
+   (and the mock's elements, when there is one), has no behavior regressions,
+   and doesn't silently drop features (e.g. a removed page that held a
+   banner).
+   Check the tests too: every bug card has a regression unit test that
+   targets the actual root cause (not just a happy path near it), feature
+   logic has unit tests, and any integration or end-to-end test is justified
+   by real risk. Send missing or weak tests back to the agent.
+2. Run `/code-review` (the `code-review` skill) at a moderate level on the
+   combined change, or review by hand for small diffs. Send concrete fixes
+   back to the same agent with `SendMessage` (it keeps context) instead of
+   fixing them yourself.
+3. Check data assumptions with read-only queries where it matters (e.g. real
+   values containing commas, nulls).
+
+## 4. Integrate and verify
+
+1. Create one local integration worktree from fresh `origin/main`
+   (`git worktree add -b <batch-branch> .claude/worktrees/<batch> origin/main`)
+   and `git merge --no-ff` each agent branch with a message like
+   `Card #<n>: <summary> (merge <branch>)` plus the attribution trailers.
+2. Set it up so it builds like the main checkout: dependencies (a real copy
+   or fresh install if the bundler rejects a symlinked `node_modules`), the
+   local env file, and any untracked local folders lint depends on.
+3. Run lint (0 errors), typecheck, unit tests and the production build
+   (into a separate output dir if the framework allows, e.g.
+   `NEXT_DIST_DIR=.next-verify` for Next.js, so it doesn't clash with a
+   running dev server). Afterwards restore any tracked files the build or
+   dev server rewrites (`git checkout -- <file>`).
+4. Start the dev server in the background on a free port in the agent port
+   range from the project settings (check it's free with `lsof -i :<port>`
+   first). If another session's server holds a port, don't kill it, pick
+   another one. Never use the user's own dev port. Use the chosen port
+   everywhere below.
+5. Playwright (headless, from the integration worktree so `playwright`
+   resolves; put the script in the worktree root as `.verify-tmp.mjs`, run
+   it with the local env file loaded, e.g. `node --env-file=.env.local`,
+   delete it after):
+   - If the bundled browser isn't downloaded, point `chromium.launch` at an
+     installed one with `executablePath`.
+   - The dev server must use the non-production database. Log in with the
+     project's test accounts, reading the password from its env var. Never
+     print the password. If the accounts are missing, run the project's test
+     database reset first.
+   - Mobile: `{ viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 }`;
+     desktop: `1440x900`.
+   - **Always screenshot every changed screen at BOTH sizes** (mobile and
+     desktop), even when the card only mentions one. Name them
+     `<n>-mobile-<screen>.png` and `<n>-desktop-<screen>.png`. A run without
+     both sets isn't verified.
+   - Remove dev-only overlays (e.g. the framework's dev badge) before
+     clicking or screenshotting near them.
+   - Use real clicks (not `.check()` through hidden elements) so clipped or
+     covered UI fails the test. Count only visible elements (responsive
+     layouts often keep both desktop and mobile markup in the DOM).
+   - Capture console errors and note which ones are expected dev-only noise.
+   - Save screenshots to the session scratchpad and LOOK at each one before
+     using it (a screenshot can show a loading skeleton, a mid-transition tab,
+     or the wrong state). Use realistic test images, not flat colors that look
+     like placeholders.
+   - Pick the test account whose role or plan shows the changed UI. For
+     states no account covers, adjust the non-production database freely,
+     but never edit production data here.
+6. If anything fails, send it back to the owning agent, re-merge, re-verify.
+7. **Pre-push review agents.** With the dev server still running, launch the
+   adversarial code review, security review and requirements recheck below,
+   plus the QA agent only when its condition is met, as Sonnet sub-agents in
+   parallel (`Agent`, `model: "sonnet"`, `run_in_background: true`, no
+   worktree isolation). Each works read-only against the integration
+   worktree: no commits, no pushes, no Trello writes, no production writes.
+   Give each the card numbers, the full card specs and comments, any mock-up
+   links, the integration worktree path and the diff command
+   (`git -C <worktree> diff origin/main...HEAD`). Each returns a findings
+   list (severity, file:line or screen, the concrete failure, a suggested
+   fix):
+   - **Adversarial code review:** try to break the change. Edge cases, nulls
+     and empty states, race conditions, stale state after saves, error paths,
+     regressions in callers of changed functions, features silently dropped.
+   - **Security review:** auth and role checks on every new or changed route,
+     row-level security and privileged-client use, IDOR (ids scoped to the
+     right user or account), input validation, SSRF in server-side fetches,
+     XSS and unsafe URLs, secrets in client code or logs, upload type and
+     size limits.
+   - **QA of the feature (only when needed, the exception not the rule):**
+     run it only when a card is UI intensive AND complex enough that the
+     step 4.5 screenshots can't cover it, e.g. a new multi-step flow, a form
+     with validation and several states, or interactions that span screens
+     or roles. Skip it for copy changes, small or isolated UI tweaks, counts
+     or labels, and backend or query changes, and say in the final report
+     that QA was skipped only if a reviewer would expect it. When it runs:
+     use it on `http://localhost:<port>` (the run's dev server) with
+     Playwright (same setup as step 4.5, its own `.qa-tmp-<n>.mjs` file,
+     deleted after) the way a real user would: happy path, 375px mobile and
+     desktop, bad input, empty states, back and refresh, other roles. Report
+     what broke, with screenshots in the scratchpad.
+   - **Requirements recheck:** go through each card line by line
+     (description, checklists, comments, attachments) and compare with the
+     built product and this run's screenshots: every requirement met, exact
+     copy, and the layout matching the design system. For a mock-up, compare
+     against its page elements read through the Figma MCP or page code (step
+     1.3), not only its image; if it can't read them, report that as a
+     blocker. List anything missing or different.
+   Read every finding and drop false positives (note why). Send real ones to
+   the owning implementation agent with `SendMessage`, then re-merge and
+   re-run steps 4.3 to 4.5 for the affected cards. Re-run a reviewer if its
+   area changed materially.
+8. Kill the dev server as soon as verification and the review agents are done
+   (`kill $(lsof -t -i :<port>)`, only this run's port), and confirm it's
+   stopped.
+
+## 5. Production migrations and scripts
+
+Only when the run includes a migration or a production data script. Verify
+every production change 2 to 3 times before it runs:
+1. **Order:** if new code reads a new column or table, apply the production
+   migration BEFORE pushing the code, or live pages break in between.
+2. **Before:** read-only queries on production to confirm the starting state
+   (the column doesn't exist yet, the row counts and target rows the script
+   expects).
+3. **Dry run:** migrations with the project's dry-run command against
+   production (e.g. `supabase db push --dry-run` after linking the
+   production project); it must list exactly this run's migrations. Scripts
+   in their production dry-run mode; the output must match what you expect
+   (counts and every proposed change). If anything is unexpected, stop and
+   fix it first.
+4. **Re-check:** run the dry run again right before applying and confirm
+   nothing changed (another session may have written in between). For
+   deletes or bulk updates, also spot-check a few target rows with read-only
+   queries.
+5. **Apply:** the migration command, or the script in its production write
+   mode (with approval, see the top).
+6. **After:** verify with read-only queries: the column or constraint exists,
+   the migration history table has the new versions, and counts changed by
+   exactly the expected amount and nothing else. If anything is off, report
+   it under "Out of the ordinary" in the final report.
+
+## 6. Push
+
+1. `git fetch origin main`; `git log --oneline HEAD..origin/main` (if origin
+   moved, merge it in and re-run lint, typecheck, unit tests and the build);
+   `git log --oneline origin/main..HEAD` must show only this run's commits.
+   If unpushed commits from another session appear, stop and tell the user.
+2. Push it yourself from the integration worktree: `git push origin HEAD:main`
+   (no force), quoting the approval (see the top). Don't hand the push to a
+   sub-agent: relaying approval to a sub-agent gets flagged as a bypass.
+3. If the project has a long-lived branch to keep in sync (e.g. `preview`):
+   fast-forward it with `git push origin origin/main:refs/heads/<branch>`
+   when `origin/<branch>` is an ancestor of `origin/main`, otherwise merge
+   `main` into it in a worktree, push that, and stop on conflicts. Never
+   force-push it.
+
+## 7. Trello updates (after the push)
+
+For each shipped card:
+1. **Attach screenshots** with `mcp__trello__attach_file_to_card`,
+   `fileUrl: "file:///<absolute path>"`, `cardId` = the short objectId (not
+   the ARI), a descriptive `name`, `mimeType: "image/png"`. Do not read
+   Trello credentials or inline base64.
+2. **Post a short comment** (`trelloWriteCard` `add_comment`, first person),
+   in this order:
+   - A one-sentence summary of what was fixed or built.
+   - All the screenshots, in this same comment: a `**Mobile**` heading with
+     the mobile screenshots, then a `**Desktop**` heading with the desktop
+     ones. Embed each as
+     `![name.png](<attachment url from the upload result>)`, each in its
+     own paragraph with a blank line between them. Images on consecutive
+     lines render as broken "Unsupported image" links in Trello.
+   - Numbered click-path test steps a reviewer can follow in the live app
+     (where to go, what to click, what they should see).
+   - Commit links `[sha](https://github.com/<owner>/<repo>/commit/<sha>)`
+     for the card's commits and the merge commit.
+   - Last, and only if necessary, an **Important:** note for the card's
+     reviewers (e.g. something that could not be verified). Leave it out
+     otherwise. No root-cause write-ups or judgment-call lists.
+   - **Never put tasks for the user in a card comment.** Comments are only
+     for the card's reviewers. Anything the user has to do (add an env var,
+     run a command, make a decision, check something after a deploy) goes in
+     the step 10 to-do list in the Claude session, not on the card. Also
+     don't write "I will check X later" promises in comments.
+3. **Make the card's reviewer its only member and move it to Done** (one
+   step; do both together for each card):
+   - The reviewer is the card's original creator:
+     `mcp__trello__get_card_history` with filter
+     `createCard,copyCard,convertToCardFromCheckItem,emailCard`, take
+     `idMemberCreator`. If that's the user, use the fallback reviewer from
+     the project settings (or keep the user if there is none). Add the
+     reviewer with `mcp__trello__assign_member_to_card` first (skip if
+     already a member), then remove every other member (including the user,
+     unless they're the reviewer) with `mcp__trello__remove_member_from_card`,
+     and confirm the returned member list is exactly the reviewer.
+   - In the same step, move the card to Done with `mcp__trello__move_card`.
+     Only for cards this run shipped; cards that weren't built, were pulled
+     from the push or aborted stay where they are.
+
+## 8. Clean up
+
+- Remove the integration and agent worktrees (`git worktree remove --force`,
+  after checking `git status --porcelain` only shows dependencies, the local
+  env file and build artifacts), `git branch -d` the merged branches,
+  fast-forward the main checkout (`git merge --ff-only origin/main`). Step 10
+  confirms it all.
+
+## 9. Final report to the user
+
+Keep the terminal report VERY short, scannable in a few seconds. The details
+(what changed, test steps, screenshots, commits, prod changes, the push) are
+already in the card comments, so don't repeat them here. Exactly these
+parts, in this order, one line per item:
+
+1. **Cards:** one line per card, with a link and a one-phrase summary:
+   - `✅ [#<n> <title>](<card url>): <short summary>` for a shipped card.
+   - `⚠️ [#<n> <title>](<card url>): needs input, <question>` for a card
+     that wasn't built.
+   - `❌ [#<n> <title>](<card url>): <what stopped it, current state>` for
+     a card pulled from the push or aborted.
+2. **Out of the ordinary:** only things the user needs to know that aren't
+   routine, each as one `⚠️` line (or `❌` if it stopped the work): partial
+   or skipped verification, a production problem, a serious security issue,
+   a surprise like another session's push landing mid-run that changed what
+   shipped. Usually there are none; then skip this part entirely. Never list
+   routine items here (a normal migration, the push range, branch sync, a
+   reviewer finding that was fixed).
+3. **Repo state:** the single line from step 10.3.
+4. **Left for you to do:** the line(s) from step 10.3.
+
+No headings, tables, root-cause write-ups, judgment-call lists or
+paragraphs. Example:
+
+```
+✅ [#48 Onboarding flow](https://trello.com/c/...): signup, review queue, team invites
+✅ [#69 Search filters](https://trello.com/c/...): location and salary filters
+⚠️ [#61 Pricing page](https://trello.com/c/...): needs input, annual discount 15% or 20%?
+✅ Repo state
+⚠️ Run the backfill: npx tsx scripts/backfill-links.mts --prod --apply
+```
+
+## 10. Final check (always the last step)
+
+Do this every run, even if earlier steps failed or the run stopped early. Run
+the checks, fix what's this run's to fix, then end the session's last message
+with the two sections below.
+
+1. **Run the `repo-state` skill** (Skill tool, `repo-state`), passing any
+   long-lived branches from the project settings. It checks for uncommitted
+   changes, unpushed commits, extra local branches, worktrees besides the
+   main checkout, and whether the main checkout is on an up-to-date `main`.
+   For every ⚠️ that is this run's (its worktrees, branches, commits): push
+   approved work, remove merged worktrees (`git worktree remove --force`) and
+   branches (`git branch -d`, never `-D` on unmerged work),
+   `git merge --ff-only origin/main` in the main checkout, then run
+   `repo-state` again until only other sessions' items are left. Other
+   sessions' worktrees, branches and commits are NEVER removed or pushed;
+   list them for the user.
+2. **Extra checks repo-state doesn't cover:** any long-lived branch is
+   synced (`git merge-base --is-ancestor origin/main origin/<branch>`),
+   `git ls-remote --heads origin` shows no branch this run created, the run's
+   dev server port is free, and no `.verify-tmp.mjs`, `.qa-tmp-*.mjs` or
+   separate build output dir is left behind.
+3. End the step 9 report with:
+   - **Repo state:** a single line `✅ Repo state` when repo-state is
+     clean (other than other sessions' items) and the step 10.2 checks pass.
+     If one fails, `⚠️ Repo state: <what's left and why>` (or `❌` if the
+     run aborted and left things half done).
+   - **Left for you to do:** a single line `✅ Nothing for you to do` when
+     there is nothing. Otherwise one `⚠️ <action>` line for each action the
+     run could not complete without the user's intervention: env vars or
+     settings to add in hosting or third-party dashboards, production
+     commands the permission system blocked, Needs input questions or
+     product decisions that block work, and other sessions' leftover
+     worktrees/branches/unpushed commits to decide on. NOT test steps or
+     "verify after deploy" checks (those are already in the card comments
+     for reviewers), and not optional judgment calls. Often this is just the
+     check mark. These go here, never in Trello comments.
+4. Then send exactly one mobile notification with `PushNotification` (load it
+   with ToolSearch first): a one-line summary like
+   "Shipped 4 cards, 1 needs input, 2 to-dos for you". Never send one per card
+   or per step.
