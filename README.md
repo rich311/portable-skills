@@ -46,6 +46,7 @@ When the project settings name a staging branch, a bug label and a "Done in stag
 
 - `triage-hourly.sh`: skips outside the allowed hours or while a previous run is going, asks a cheap Haiku session whether any of your cards are waiting, runs triage only if so, then emails the report (only the text after its final `SUBJECT:` line, which becomes the subject).
 - `send-report.py`: sends the email over SMTP (no dependencies beyond Python 3).
+- `report_html.py`: turns the plain-text report into a styled HTML email (a header with the counts, a panel per section, a linked row per card). The plain text goes along as the fallback part. Change the colors at the top to match your brand.
 - `triage.env.example`: the settings; copy to `~/.config/triage-cards/<name>.env`. It holds a password, so keep it out of the repo.
 - `triage-hourly.plist`: a macOS launchd job that starts the script on the hour (cron works too: `0 * * * * /path/to/triage-hourly.sh /path/to/name.env`).
 

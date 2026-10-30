@@ -8,6 +8,8 @@ import smtplib
 import sys
 from email.message import EmailMessage
 
+from report_html import report_to_html
+
 subject, body_file = sys.argv[1], sys.argv[2]
 env = os.environ
 for name in ("REPORT_TO", "SMTP_HOST", "SMTP_USER", "SMTP_PASSWORD"):
@@ -18,7 +20,9 @@ msg = EmailMessage()
 msg["Subject"] = subject
 msg["From"] = env.get("SMTP_FROM") or env["SMTP_USER"]
 msg["To"] = env["REPORT_TO"]
-msg.set_content(open(body_file, encoding="utf-8").read())
+text = open(body_file, encoding="utf-8").read()
+msg.set_content(text)
+msg.add_alternative(report_to_html(subject, text), subtype="html")
 
 port = int(env.get("SMTP_PORT") or 587)
 if port == 465:
