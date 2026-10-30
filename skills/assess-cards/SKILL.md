@@ -12,10 +12,11 @@ founder-only call, or it depends on something only the creator has.
 Everything else gets a reasonable assumption instead of a question.
 
 Invoking this skill IS the user's request to post one question comment on
-each card that has such questions. A card with none gets no comment. It
-does not cover any other Trello write: never move the
-card, change its members or labels, or edit its description. No code
-changes, no commits, no dev server.
+each card that has such questions and move that card to Not Ready (step 4).
+A card with none gets no comment and stays where it is. It does not cover
+any other Trello write: never change a card's members or labels, edit its
+description, or move it anywhere else. No code changes, no commits, no dev
+server.
 
 Never use em dashes anywhere (Trello text or the chat summary). Trello writes
 post as the user, so write them in the first person and never name the user.
@@ -26,6 +27,8 @@ Read these from the project's CLAUDE.md if it lists them; otherwise look
 them up once (`trelloReadMember` `get_me` for the user,
 `trelloReadBoard` for the board and its members):
 - The Trello board for this project.
+- Its "Ready To Start" and "Not Ready" lists (or the project's
+  equivalents). If there's no Not Ready list, leave cards where they are.
 - The user's Trello member id (whose voice the comments are in).
 
 ## 1. Read each card in full
@@ -33,6 +36,10 @@ them up once (`trelloReadMember` `get_me` for the user,
 1. Resolve the card(s). For a name, use `trelloSearch` with `search_cards`.
    For a URL or number, use `trelloReadCard` `get`. For a whole list, use
    `trelloReadCard` `list_by_list`.
+   **Default scope.** If the user names no cards or list, assess the cards
+   in Ready To Start where the user is the only member (the card's
+   `idMembers` is exactly the user's id). Anything the user writes (card
+   names, numbers, URLs, a list or a filter) overrides this default.
 2. Read everything: the description, checklists, ALL comments
    (`list_comments`, and page through them) and attachments
    (`list_attachments`; open images or mocks with
@@ -138,12 +145,18 @@ Post with `mcp__trello__add_comment` (card id from step 1). After posting,
 re-read the comment (`trelloReadCard` `list_comments`) and fix any mistakes
 with `mcp__trello__update_comment`. Don't post a second comment.
 
+Then move the card to **Not Ready** with `mcp__trello__move_card`, leaving
+its members as they are. That keeps it out of the Ready To Start queue (and
+any scheduled triage run) while the questions are open; whoever answers
+moves it back to Ready To Start, and the next run assesses it again with the
+answers. Only move cards you just posted questions on.
+
 ## 5. Report back
 
 For each card, tell the user:
 - A link to the card and its verdict: **Ready** (no comment posted) or
-  **Needs input** (questions posted as a comment, the description wasn't
-  touched).
+  **Needs input** (questions posted as a comment and the card moved to Not
+  Ready; the description wasn't touched).
 - For Needs input: the questions in one line each, and who was @mentioned,
   so they know a notification went out, with an offer to remove the mention.
 - The assumptions you're going with, one line each.

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  macOS launchd job: runs triage-hourly.sh on the hour. Replace the two paths, save as
+  ~/Library/LaunchAgents/com.example.triage-hourly.plist, then:
+    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.example.triage-hourly.plist
+  The script itself skips hours outside START_HOUR to END_HOUR. Stop it with
+    launchctl bootout gui/$(id -u)/com.example.triage-hourly
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.example.triage-hourly</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>/path/to/portable-skills/automation/triage-hourly.sh</string>
+    <string>/Users/you/.config/triage-cards/default.env</string>
+  </array>
+  <key>StartCalendarInterval</key>
+  <dict><key>Minute</key><integer>0</integer></dict>
+</dict>
+</plist>

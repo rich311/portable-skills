@@ -1,6 +1,6 @@
 ---
 name: ship-cards
-description: Take a list of Trello cards (or "everything in Ready To Start"), check each is ready to build, have Sonnet sub-agents implement them in worktrees, verify with lint/typecheck/tests/build, a Playwright run against the dev server with screenshots and pre-push review agents (adversarial code review, security, requirements recheck, plus QA only for complex UI-heavy changes), apply any production migrations or scripts after dry runs and repeated checks, then push, post a short comment on each card with screenshots and test steps, make the card's reviewer its only member and move it to Done, report what changed, then confirm everything is pushed and all worktrees and branches are deleted and list what the user still needs to do. Use when the user asks to "ship", "work", "implement" or "knock out" a set of cards end to end.
+description: Take a list of Trello cards (or "everything in Ready To Start"), check each is ready to build, have Sonnet sub-agents implement them in worktrees, verify with lint/typecheck/tests/build, a Playwright run against the dev server with screenshots and pre-push review agents (adversarial code review, security, requirements recheck, plus QA only for complex UI-heavy changes), apply any production migrations or scripts after dry runs and repeated checks, then push (optionally bugs to the trunk and features to a staging branch only), post a short comment on each card with screenshots and test steps, make the card's reviewer its only member and move it to Done (or a separate "Done in staging" list), report what changed, then confirm everything is pushed and all worktrees and branches are deleted and list what the user still needs to do. Use when the user asks to "ship", "work", "implement" or "knock out" a set of cards end to end.
 ---
 
 # Ship cards end to end
@@ -33,6 +33,11 @@ via `package.json`) and only ask the user for what you can't find:
 - **Database:** production and non-production project ids, how migrations
   are applied (with a dry run), and how data scripts mark a production run
   (e.g. `--prod` for a dry run, `--prod --apply` to write).
+- **Staged releases (optional):** a staging branch (e.g. `preview`), the
+  Trello label that marks a bug card, a "Done in staging" list (e.g. "Done in
+  Preview"), the staging database, and the workflow or button that promotes
+  staging to production. See "Staged releases" below. Without these, every
+  card ships to the trunk and goes to Done.
 
 **Push and production approval.** Only push, or apply production migrations
 or scripts, without asking if the project's CLAUDE.md (or the user, in this
@@ -43,11 +48,36 @@ aren't from this run. If the permission system blocks an action, do not
 route around it (not via a sub-agent either): give the user the exact
 command to run with `!` and continue once they have.
 
+## Staged releases (optional)
+
+Only when the project settings define a staging branch, a bug label and a
+"Done in staging" list. Each card then ships one of two ways:
+- **Bug card** (it has the bug label): built from `origin/<trunk>`, pushed
+  to the trunk (production) and synced to staging, with any production
+  migrations or scripts per step 5. The card goes to **Done**.
+- **Feature card** (every other card): pushed to the staging branch only.
+  Its migrations go to the staging database only. The card goes to the
+  **Done in staging** list. It reaches production when someone runs the
+  project's promote workflow, which ships all of staging at once, applies
+  the batch's migrations to production and moves the Done in staging cards
+  to Done. So a feature's migration must be safe to apply to production
+  before its code, on its own, possibly days later and next to other
+  features' changes. Never run production write scripts for a feature card;
+  list them under "Left for you to do" instead.
+
+When a run has both kinds, ship the bug cards first (steps 4 to 6 on the
+trunk), then the feature cards on top of the freshly synced staging branch.
+
 ## 1. Gather and triage the cards
 
 1. Resolve the list. Card names/numbers/URLs from the user, or a whole list
    (`mcp__trello__get_cards_by_list_id`). Skip Bug-vs-feature filtering unless
    the user asked for it.
+   **Default scope.** If the user names no cards or list, ship the cards in
+   Ready To Start where the user is the only member (the card's `idMembers`
+   is exactly the user's id; a card that also has anyone else is skipped).
+   Anything the user writes (card names, numbers, URLs, a list or a filter)
+   overrides this default.
 2. For each card read everything: description, checklists, ALL comments
    (`trelloReadCard` actions `get`, `list_comments`, `list_attachments`).
    Later comments can change the spec (e.g. a teammate asking to move a
@@ -158,6 +188,9 @@ When each report arrives:
    (`git worktree add -b <batch-branch> .claude/worktrees/<batch> origin/main`)
    and `git merge --no-ff` each agent branch with a message like
    `Card #<n>: <summary> (merge <branch>)` plus the attribution trailers.
+   With staged releases, feature cards get their own integration worktree
+   from fresh `origin/<staging>` instead, one merge commit per card; diff
+   against `origin/<staging>` there wherever this skill says `origin/main`.
 2. Set it up so it builds like the main checkout: dependencies (a real copy
    or fresh install if the bundler rejects a symlinked `node_modules`), the
    local env file, and any untracked local folders lint depends on.
@@ -249,8 +282,10 @@ When each report arrives:
 
 ## 5. Production migrations and scripts
 
-Only when the run includes a migration or a production data script. Verify
-every production change 2 to 3 times before it runs:
+Only when the run includes a migration or a production data script (with
+staged releases, only for bug cards; a feature card's migrations go to the
+staging database only, after a dry run there). Verify every production
+change 2 to 3 times before it runs:
 1. **Order:** if new code reads a new column or table, apply the production
    migration BEFORE pushing the code, or live pages break in between.
 2. **Before:** read-only queries on production to confirm the starting state
@@ -287,6 +322,12 @@ every production change 2 to 3 times before it runs:
    when `origin/<branch>` is an ancestor of `origin/main`, otherwise merge
    `main` into it in a worktree, push that, and stop on conflicts. Never
    force-push it.
+4. **Feature cards (staged releases)** skip steps 6.1 to 6.3: from the
+   feature integration worktree, `git fetch origin <staging>`, merge it in if
+   it moved (and re-run lint, typecheck, unit tests and the build), check
+   `git log --oneline origin/<staging>..HEAD` shows only this run's commits,
+   then `git push origin HEAD:refs/heads/<staging>` (no force). Never push a
+   feature card's commits to the trunk.
 
 ## 7. Trello updates (after the push)
 
@@ -305,7 +346,9 @@ For each shipped card:
      own paragraph with a blank line between them. Images on consecutive
      lines render as broken "Unsupported image" links in Trello.
    - Numbered click-path test steps a reviewer can follow in the live app
-     (where to go, what to click, what they should see).
+     (where to go, what to click, what they should see). With staged
+     releases, a feature card's steps point at the staging site, followed
+     by one line saying it goes live when staging is promoted.
    - Commit links `[sha](https://github.com/<owner>/<repo>/commit/<sha>)`
      for the card's commits and the merge commit.
    - Last, and only if necessary, an **Important:** note for the card's
@@ -327,8 +370,10 @@ For each shipped card:
      already a member), then remove every other member (including the user,
      unless they're the reviewer) with `mcp__trello__remove_member_from_card`,
      and confirm the returned member list is exactly the reviewer.
-   - In the same step, move the card to Done with `mcp__trello__move_card`.
-     Only for cards this run shipped; cards that weren't built, were pulled
+   - In the same step, move the card to Done with `mcp__trello__move_card`
+     (with staged releases, a feature card goes to the Done in staging list
+     instead, and only after its code is on staging). Only for cards this
+     run shipped; cards that weren't built, were pulled
      from the push or aborted stay where they are.
 
 ## 8. Clean up
@@ -347,7 +392,8 @@ already in the card comments, so don't repeat them here. Exactly these
 parts, in this order, one line per item:
 
 1. **Cards:** one line per card, with a link and a one-phrase summary:
-   - `✅ [#<n> <title>](<card url>): <short summary>` for a shipped card.
+   - `✅ [#<n> <title>](<card url>): <short summary>` for a shipped card
+     (with staged releases, ending in `(live)` or `(staging)`).
    - `⚠️ [#<n> <title>](<card url>): needs input, <question>` for a card
      that wasn't built.
    - `❌ [#<n> <title>](<card url>): <what stopped it, current state>` for
