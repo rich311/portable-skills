@@ -248,7 +248,18 @@ When each report arrives:
    - **Adversarial code review:** try to break the change. Edge cases, nulls
      and empty states, race conditions, stale state after saves, error paths,
      regressions in callers of changed functions, features silently dropped.
-   - **Security review:** auth and role checks on every new or changed route,
+   - **Security review:**
+     It runs in two parts and reports them separately:
+     1. First the built-in `/security-review` (Skill tool, skill
+        `security-review`), so it also runs on Sonnet. It reviews the
+        pending changes of the repo it runs in, so tell the agent to work
+        from the integration worktree and run any git commands the skill
+        asks for there, never in the main checkout, and to confirm the
+        commit range it reviewed. Tell it to follow every step of the
+        skill, including the separate false-positive check per finding,
+        even when a finding already looks certain.
+     2. Then its own checklist:
+     auth and role checks on every new or changed route,
      row-level security and privileged-client use, IDOR (ids scoped to the
      right user or account), input validation, SSRF in server-side fetches,
      XSS and unsafe URLs, secrets in client code or logs, upload type and
