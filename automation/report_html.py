@@ -130,12 +130,38 @@ def section_html(b):
     )
 
 
-def report_to_html(subject, text, now=None):
+def button(href, label, primary):
+    style = (f'background:{C["header"]};color:#FFFFFF' if primary
+             else f'background:{C["card"]};color:{C["ink"]};border:1px solid {C["ring"]}')
+    return (f'<a href="{esc(href)}" style="display:inline-block;margin:4px;border-radius:999px;padding:11px 20px;'
+            f'font-size:14px;font-weight:600;text-decoration:none;{style}">{esc(label)}</a>')
+
+
+def ship_html(blocks, preview_url, ship_url):
+    """Links to the staging site and the job that ships it live (only when the project sets SHIP_URL).
+    When this run put features on staging, they get a panel saying what to do next."""
+    if not ship_url:
+        return ""
+    on_preview = any(b["type"] == "section" and re.match(r"(?i)shipped to preview", b["title"]) for b in blocks)
+    buttons = (button(preview_url, "Open the test site", False) if preview_url else "") + button(ship_url, "Ship preview to production", True)
+    if not on_preview:
+        return f'<tr><td align="center" style="padding:4px 0 8px">{buttons}</td></tr>'
+    return (
+        f'<tr><td style="padding:0 0 16px"><div style="background:{C["card"]};border:1px solid {C["ring"]};'
+        'border-radius:16px;padding:16px 20px;text-align:center">'
+        f'<div style="font-size:15px;line-height:22px;color:{C["ink"]};font-weight:600">The features above are on the test site</div>'
+        f'<div style="margin:4px 0 10px;font-size:14px;line-height:21px;color:{C["muted"]}">Once you\'ve checked them, ship everything on preview to the live site.</div>'
+        f"{buttons}</div></td></tr>"
+    )
+
+
+def report_to_html(subject, text, now=None, preview_url=None, ship_url=None):
     now = now or datetime.now()
     headline = re.sub(r"^Triage cards:\s*", "", subject)
     when = now.strftime("%A, %B %-d at %-I:%M %p")
     rows = []
-    for b in parse_report(text):
+    blocks = parse_report(text)
+    for b in blocks:
         if b["type"] == "section":
             rows.append(section_html(b))
         elif b["type"] == "status":
@@ -158,6 +184,7 @@ def report_to_html(subject, text, now=None):
       </td></tr>
       <tr><td style="height:16px"></td></tr>
       {"".join(rows)}
+      {ship_html(blocks, preview_url, ship_url)}
     </table>
   </td></tr>
 </table>

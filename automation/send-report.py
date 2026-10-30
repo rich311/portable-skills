@@ -22,7 +22,7 @@ msg["From"] = env.get("SMTP_FROM") or env["SMTP_USER"]
 msg["To"] = env["REPORT_TO"]
 text = open(body_file, encoding="utf-8").read()
 msg.set_content(text)
-msg.add_alternative(report_to_html(subject, text), subtype="html")
+msg.add_alternative(report_to_html(subject, text, preview_url=env.get("PREVIEW_URL"), ship_url=env.get("SHIP_URL")), subtype="html")
 
 port = int(env.get("SMTP_PORT") or 587)
 if port == 465:
