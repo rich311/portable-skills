@@ -23,7 +23,7 @@ cd "$ROOT" || exit 2
 git fetch -q origin $KEEP_BRANCHES 2>/dev/null || echo "⚠️ Could not fetch origin, results may be stale"
 
 # Local files and build artifacts the dev tooling leaves behind; not real work.
-IGNORE_PATHS='node_modules|\.env\.local|\.next-verify/?|\.next-agent/?|\.verify-tmp\.mjs|\.qa-tmp-.*\.mjs'
+IGNORE_PATHS='\.ship-cards-resume|node_modules|\.env\.local|\.next-verify/?|\.next-agent/?|\.verify-tmp\.mjs|\.qa-tmp-.*\.mjs'
 [ -n "${EXTRA_IGNORE:-}" ] && IGNORE_PATHS="$IGNORE_PATHS|$EXTRA_IGNORE"
 IGNORE="^.. ($IGNORE_PATHS)$"
 KEEP_RE="^($(echo "$KEEP_BRANCHES" | tr ' ' '|'))$"
@@ -73,7 +73,11 @@ else echo "✅ No local branches besides $KEEP_BRANCHES"; fi
 # 4. Worktrees besides the main checkout.
 if [ -n "$extra_wt" ]; then
   echo "⚠️ Extra worktrees:"
-  git worktree list | tail -n +2 | sed 's/^/   /'
+  git worktree list | tail -n +2 | while IFS= read -r line; do
+    wt=${line%% *}
+    if [ -f "$wt/.ship-cards-resume" ]; then echo "   $line (kept for resume by ship-cards)"
+    else echo "   $line"; fi
+  done
   dirty=1
 else echo "✅ No worktrees besides the main checkout"; fi
 

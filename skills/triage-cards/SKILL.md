@@ -69,8 +69,13 @@ quote that approval before pushing. In this mode:
     few words. Minor judgment calls, assumptions, test-data numbers and
     routine notes (checks passed, who the member is, other sessions' pushes
     that were handled) are left out entirely.
+  - A card that stopped with its work kept for resume (see "Kept for
+    resume" in `ship-cards`) says so at the end of its `❌` line, with the
+    branch, so the user knows moving it back to Ready To Start lets the next
+    run finish it.
   - Last line: `✅ Repo state clean`, or `⚠️ Repo state needs cleaning:
-    <what>`.
+    <what>`. Worktrees kept for resume don't count as needing cleaning; list
+    them as `⚠️ Kept for resume: #<n> on <branch>`.
 
 ## 1. Assess every card once
 

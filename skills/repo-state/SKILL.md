@@ -39,6 +39,10 @@ For each ⚠️ item, work out whose it is before saying anything about it:
 - A worktree or branch the current session created is this session's. When
   the caller (e.g. ship-cards) says to clean up, it does that itself, then
   re-runs the check.
+- A worktree marked "(kept for resume by ship-cards)" was left on purpose
+  by a stopped ship-cards run (its `.ship-cards-resume` file says which card
+  and why). Report it as `⚠️ Kept for resume: #<n> on <branch>` and never
+  remove it; the next ship-cards run on that card picks it up.
 - Anything else may be another Claude session's work in progress (several
   can run in one repo at once). Never remove, reset, push or check it out.
   Use `git -C <worktree> log --oneline origin/main..HEAD -3` and the branch

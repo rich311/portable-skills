@@ -7,7 +7,7 @@ Claude Code skills for a Trello-driven workflow, with no project-specific settin
 | `repo-state` | Read-only check for uncommitted changes, unpushed commits, extra branches and worktrees |
 | `assess-cards` | Reads Trello cards, posts questions only when a card can't be built safely, and moves those cards to Not Ready |
 | `triage-cards` | Runs `assess-cards`, then `ship-cards` on the cards that are ready; `unattended` mode for scheduled runs |
-| `ship-cards` | Builds cards with sub-agents in worktrees, verifies, pushes (optionally bugs to production, features to staging), updates Trello and cleans up |
+| `ship-cards` | Builds cards with sub-agents in worktrees, verifies, pushes (optionally bugs to production, features to staging), updates Trello and cleans up; a card that stops after it's built keeps its worktree, and the next run resumes it instead of rebuilding |
 
 With no cards named, `assess-cards`, `triage-cards` and `ship-cards` work on the Ready To Start cards where you are the only member.
 

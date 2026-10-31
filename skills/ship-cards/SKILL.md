@@ -141,6 +141,33 @@ trunk), then the feature cards on top of the freshly synced staging branch.
      these. Record the specific questions for the final report.
    Quick code checks (grep the relevant component) are fine to confirm scope.
 5. Move every Ready card to Doing now.
+6. **Resume work a stopped run left behind.** Before building anything,
+   check each Ready card for a worktree an earlier run kept on purpose (see
+   "Kept for resume" in step 9): `git worktree list --porcelain`, then for
+   each worktree read `<worktree>/.ship-cards-resume`. It is resumable only
+   if ALL of these hold:
+   - the marker names this card (match the card id first, the number
+     second: a card moved between boards comes back with a new number);
+   - no process is working in it
+     (`lsof -d cwd -Fn 2>/dev/null | grep -F "<worktree>"` prints nothing);
+   - `git -C <worktree> status --porcelain` shows nothing besides the
+     marker, dependencies, the local env file and build artifacts;
+   - every commit in `git -C <worktree> log --oneline <base>..HEAD` is for
+     this card (`<base>` is `origin/main`, or `origin/<staging>` for a
+     feature card with staged releases).
+   For a resumable card, skip the build in step 2 and take over that
+   worktree and branch as if this run's agent had made them (they are this
+   run's from now on, cleanup included). Delete the marker. If the card's
+   description, checklists or comments changed after the marker's date, or
+   the marker's reason says the code itself was the problem, give a Sonnet
+   agent the existing worktree (`Agent`, `model: "sonnet"`, no `isolation`,
+   told to work only in `<worktree>`) with the card spec and that change to
+   make; otherwise go straight to step 3 and review its diff like any
+   agent's work. A worktree or branch with commits for this card but NO
+   marker, or one that fails any check above, belongs to another session:
+   never touch it, build fresh, and report it under "Out of the ordinary".
+   The check is one `git worktree list` per run, so it costs next to nothing
+   when there is nothing to resume.
 
 ## 2. Implement with Sonnet sub-agents
 
@@ -425,8 +452,10 @@ For each shipped card:
 - Remove the integration and agent worktrees (`git worktree remove --force`,
   after checking `git status --porcelain` only shows dependencies, the local
   env file and build artifacts), `git branch -d` the merged branches,
-  fast-forward the main checkout (`git merge --ff-only origin/main`). Step 10
-  confirms it all.
+  fast-forward the main checkout (`git merge --ff-only origin/main`). Only
+  remove what this run created (worktrees resumed in step 1.6 count as this
+  run's), never a worktree kept for resume in step 9. Step 10 confirms it
+  all.
 
 ## 9. Final report to the user
 
@@ -442,6 +471,15 @@ parts, in this order, one line per item:
      that wasn't built.
    - `❌ [#<n> <title>](<card url>): <what stopped it, current state>` for
      a card pulled from the push or aborted.
+
+   **Kept for resume:** when a card stops after its commits exist and the
+   work itself is sound (a production migration or script that couldn't
+   run, a permission block, a rejected push, a check that needs the user),
+   keep its worktree and branch, and write `<worktree>/.ship-cards-resume`
+   with: the card id, card number, branch, the newest commit SHA, the date
+   and time, and the reason in one line. End its `❌` line with "work kept
+   on `<branch>`, the next run resumes it once the card is back in Ready To
+   Start". If the work itself is wrong, remove it instead and say so.
 2. **Out of the ordinary:** only things the user needs to know that aren't
    routine, each as one `⚠️` line (or `❌` if it stopped the work): partial
    or skipped verification, a production problem, a serious security issue,
@@ -479,7 +517,9 @@ with the two sections below.
    `git merge --ff-only origin/main` in the main checkout, then run
    `repo-state` again until only other sessions' items are left. Other
    sessions' worktrees, branches and commits are NEVER removed or pushed;
-   list them for the user.
+   list them for the user. Worktrees kept for resume (step 9) stay too:
+   report each as `⚠️ Kept for resume: #<n> on <branch>`, not as leftover
+   work.
 2. **Extra checks repo-state doesn't cover:** any long-lived branch is
    synced (`git merge-base --is-ancestor origin/main origin/<branch>`),
    `git ls-remote --heads origin` shows no branch this run created, the run's
