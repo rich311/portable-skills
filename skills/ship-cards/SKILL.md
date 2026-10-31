@@ -106,6 +106,11 @@ trunk), then the feature cards on top of the freshly synced staging branch.
    is exactly the user's id; a card that also has anyone else is skipped).
    Anything the user writes (card names, numbers, URLs, a list or a filter)
    overrides this default.
+   **Manual cards.** Always skip a card with a label named "Manual" (or the
+   manual label the project settings name) or a name starting with "Chore",
+   even when the user names it or gives its list: it's a task for a person
+   to do by hand, not code. Don't comment on it, move it or change its
+   members; just list it as skipped (manual) in the report.
 2. For each card read everything: description, checklists, ALL comments
    (`trelloReadCard` actions `get`, `list_comments`, `list_attachments`).
    Later comments can change the spec (e.g. a teammate asking to move a

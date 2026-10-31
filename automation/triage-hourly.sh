@@ -82,7 +82,7 @@ fi
 echo $$ >"$LOCK/pid"
 trap 'rm -rf "$LOCK"' EXIT
 
-GATE_PROMPT="Use $TRELLO_GATE_TOOL with listId $TRELLO_READY_LIST. Count the open cards whose idMembers is exactly [\"$TRELLO_MEMBER_ID\"] (that member and nobody else). Reply with one line only: COUNT=<number>. If the Trello call fails, reply COUNT=ERROR."
+GATE_PROMPT="Use $TRELLO_GATE_TOOL with listId $TRELLO_READY_LIST. Count the open cards whose idMembers is exactly [\"$TRELLO_MEMBER_ID\"] (that member and nobody else), leaving out any card with a label named Manual or a name starting with Chore. Reply with one line only: COUNT=<number>. If the Trello call fails, reply COUNT=ERROR."
 GATE="$(claude -p "$GATE_PROMPT" --model haiku --permission-mode dontAsk \
   --allowedTools "$TRELLO_GATE_TOOL" --output-format text 2>&1)"
 echo "gate: $GATE"

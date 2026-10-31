@@ -86,6 +86,12 @@ Anything the user writes (card names, numbers, URLs, a list or a filter)
 overrides this default. Pass the resolved card list to `assess-cards` and
 `ship-cards` explicitly.
 
+**Manual cards.** Always skip a card with a label named "Manual" (or the
+manual label the project settings name) or a name starting with "Chore",
+even when the user names it or gives its list: it's a task for a person
+to do by hand, not code. Don't comment on it, move it or change its
+members; leave it out of the report.
+
 Run the `assess-cards` skill (via the Skill tool) on the full list. It reads
 each card, its comments and mocks, grounds it in the current app and returns
 a verdict per card:

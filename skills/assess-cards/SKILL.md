@@ -46,6 +46,11 @@ them up once (`trelloReadMember` `get_me` for the user,
    in Ready To Start where the user is the only member (the card's
    `idMembers` is exactly the user's id). Anything the user writes (card
    names, numbers, URLs, a list or a filter) overrides this default.
+   **Manual cards.** Always skip a card with a label named "Manual" (or the
+   manual label the project settings name) or a name starting with "Chore",
+   even when the user names it or gives its list: it's a task for a person
+   to do by hand, not code. Don't comment on it, move it or change its
+   members; just list it as skipped (manual) in the report.
 2. Read everything: the description, checklists, ALL comments
    (`list_comments`, and page through them) and attachments
    (`list_attachments`; open images or mocks with
