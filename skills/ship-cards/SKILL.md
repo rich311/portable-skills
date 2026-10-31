@@ -48,6 +48,34 @@ aren't from this run. If the permission system blocks an action, do not
 route around it (not via a sub-agent either): give the user the exact
 command to run with `!` and continue once they have.
 
+**Production dry run rule (every production change).** Approval or not, any
+change to production gets a dry run first. It covers everything that
+changes production, not just step 5:
+- production database migrations and production data scripts
+- any SQL write on the production database
+- hosting, database or auth provider production settings (env vars,
+  domains, auth, storage, secrets)
+
+How it works:
+1. **Dry run first:** the migration tool's dry run, the script's production
+   dry-run mode (it prints every change it would make and writes nothing),
+   or, for any other write, a read-only query or read of exactly the rows or
+   settings the write would change.
+2. **Check it item by item** against what the card expects: which
+   migrations, which rows or settings, how many, and the before and after
+   values.
+3. **Only then the real run,** after one more re-check right before applying
+   (another session may have changed production in between), then a
+   read-only check afterwards that exactly the expected change landed.
+4. **If anything looks off, or the change has no way to dry run, it doesn't
+   run.** That card stops (pull it from the push if its code depends on the
+   change), it gets a `❌` line in the final report saying why, and any
+   unattended run's email carries the same line.
+5. New production scripts must be written with that split: the production
+   flag alone (e.g. `--prod`) is the dry run, and a separate write flag
+   (e.g. `--prod --apply`) does the real write. A script without a dry run
+   mode doesn't run against production.
+
 ## Staged releases (optional)
 
 Only when the project settings define a staging branch, a bug label and a
@@ -159,7 +187,9 @@ trunk), then the feature cards on top of the freshly synced staging branch.
   Agents may apply migrations to the non-production database and run
   scripts' read-only production dry runs. Production migrations and
   production writes are done by the main session in step 5, never by an
-  agent.
+  agent. Any new production script must have a production dry-run mode that
+  prints every change it would make and writes nothing, and write only with
+  a separate flag (see the production dry run rule at the top).
 - New migrations: check the highest migration number on `origin/main` and in
   other open worktrees, so two runs don't create the same number.
 
@@ -295,8 +325,11 @@ When each report arrives:
 
 Only when the run includes a migration or a production data script (with
 staged releases, only for bug cards; a feature card's migrations go to the
-staging database only, after a dry run there). Verify every production
-change 2 to 3 times before it runs:
+staging database only, after a dry run there). This is where the
+production dry run rule at the top applies most often. The same steps cover
+any other production change a card needs (a SQL write, a hosting or
+database setting): verify it 2 to 3 times before it runs, and if it has no
+dry run, don't make it:
 1. **Order:** if new code reads a new column or table, apply the production
    migration BEFORE pushing the code, or live pages break in between.
 2. **Before:** read-only queries on production to confirm the starting state
