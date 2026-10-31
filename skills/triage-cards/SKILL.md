@@ -92,27 +92,30 @@ a verdict per card:
 
 - **Ready**: no comment is posted. Keep its list of assumptions.
 - **Needs input**: it posts one question comment for the creator and moves
-  the card to Not Ready.
+  the card to the Needs input list (and to the Needs input owner, if set).
 
 Two adjustments while it runs:
 - **Skip its push notification.** This skill sends a single one at the end.
 - **Don't re-ask.** If a card already has an earlier question comment from
   me that nobody has answered yet (no later comment from the creator), don't
-  post another. Mark the card **Still waiting** and move it to Not Ready if
-  it's still in Ready To Start. If the creator has replied since, treat the
-  reply as settling those questions and assess again with the answers.
+  post another. Mark the card **Still waiting** and, if it's still in Ready
+  To Start, handle it like a Needs input card in `assess-cards` step 4
+  (Needs input list, and the Needs input owner if set). If the creator has
+  replied since, treat the reply as settling those questions and assess
+  again with the answers.
 
 Respect dependencies: if a Ready card depends on a card that is Needs input
 or Still waiting (for example it needs a feature the other card builds),
 mark it **Blocked by #N** rather than Ready, move it to Not Ready and post a
 one-line comment: "Waiting on [#N](<card url>) before I can start this."
-(only if the card doesn't already have that comment).
+(only if the card doesn't already have that comment). Leave a Blocked
+card's members as they are.
 
-Needs input, Still waiting and Blocked cards all end up in Not Ready, so
-they leave the Ready To Start queue and a scheduled run doesn't pick them up
-again every time. Whoever answers or unblocks a card moves it back to Ready
-To Start. Never change their members. If the board has no Not Ready list,
-leave them where they are.
+Needs input and Still waiting cards end up in the Needs input list, and
+Blocked cards in Not Ready, so they leave the Ready To Start queue and a
+scheduled run doesn't pick them up again every time. Whoever answers or
+unblocks a card moves it back to Ready To Start. If the board has no such
+list, leave them where they are.
 
 ## 2. Confirm, then ship the Ready cards
 

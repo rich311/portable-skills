@@ -12,11 +12,12 @@ founder-only call, or it depends on something only the creator has.
 Everything else gets a reasonable assumption instead of a question.
 
 Invoking this skill IS the user's request to post one question comment on
-each card that has such questions and move that card to Not Ready (step 4).
-A card with none gets no comment and stays where it is. It does not cover
-any other Trello write: never change a card's members or labels, edit its
-description, or move it anywhere else. No code changes, no commits, no dev
-server.
+each card that has such questions, move that card to the Needs input list
+and, when the project names a Needs input owner, make them its only member
+(step 4). A card with none gets no comment and stays where it is. It does
+not cover any other Trello write: never change members on any other card,
+change labels, edit a description, or move a card anywhere else. No code
+changes, no commits, no dev server.
 
 Never use em dashes anywhere (Trello text or the chat summary). Trello writes
 post as the user, so write them in the first person and never name the user.
@@ -27,8 +28,13 @@ Read these from the project's CLAUDE.md if it lists them; otherwise look
 them up once (`trelloReadMember` `get_me` for the user,
 `trelloReadBoard` for the board and its members):
 - The Trello board for this project.
-- Its "Ready To Start" and "Not Ready" lists (or the project's
-  equivalents). If there's no Not Ready list, leave cards where they are.
+- Its "Ready To Start" list and the **Needs input list** where cards with
+  open questions go: the one the settings name (e.g. a prioritized not-ready
+  list), otherwise "Not Ready" (or the project's equivalent). If there's
+  neither, leave cards where they are.
+- Optional **Needs input owner**: the member who should be the only member
+  of a card with open questions. If the settings don't name one, leave
+  members as they are.
 - The user's Trello member id (whose voice the comments are in).
 
 ## 1. Read each card in full
@@ -145,18 +151,24 @@ Post with `mcp__trello__add_comment` (card id from step 1). After posting,
 re-read the comment (`trelloReadCard` `list_comments`) and fix any mistakes
 with `mcp__trello__update_comment`. Don't post a second comment.
 
-Then move the card to **Not Ready** with `mcp__trello__move_card`, leaving
-its members as they are. That keeps it out of the Ready To Start queue (and
-any scheduled triage run) while the questions are open; whoever answers
-moves it back to Ready To Start, and the next run assesses it again with the
-answers. Only move cards you just posted questions on.
+Then move the card to the **Needs input list** with `mcp__trello__move_card`.
+If the project names a Needs input owner, make them the card's only member:
+add them with `mcp__trello__assign_member_to_card` (skip if already on it),
+then remove every other member, the user included, with
+`mcp__trello__remove_member_from_card`, and re-read the card to confirm
+`idMembers` is exactly the owner's id. Otherwise leave its members as they
+are. That keeps it out of the Ready To Start queue (and any scheduled triage
+run) while the questions are open; whoever answers moves it back to Ready To
+Start, and the next run assesses it again with the answers. Only move or
+reassign cards you just posted questions on.
 
 ## 5. Report back
 
 For each card, tell the user:
 - A link to the card and its verdict: **Ready** (no comment posted) or
-  **Needs input** (questions posted as a comment and the card moved to Not
-  Ready; the description wasn't touched).
+  **Needs input** (questions posted as a comment, the card moved to the
+  Needs input list and, if set, given to the Needs input owner; the
+  description wasn't touched).
 - For Needs input: the questions in one line each, and who was @mentioned,
   so they know a notification went out, with an offer to remove the mention.
 - The assumptions you're going with, one line each.

@@ -5,7 +5,7 @@ Claude Code skills for a Trello-driven workflow, with no project-specific settin
 | Skill | What it does |
 | --- | --- |
 | `repo-state` | Read-only check for uncommitted changes, unpushed commits, extra branches and worktrees |
-| `assess-cards` | Reads Trello cards, posts questions only when a card can't be built safely, and moves those cards to Not Ready |
+| `assess-cards` | Reads Trello cards, posts questions only when a card can't be built safely, and moves those cards to Not Ready (or a Needs input list and owner the project names) |
 | `triage-cards` | Runs `assess-cards`, then `ship-cards` on the cards that are ready; `unattended` mode for scheduled runs |
 | `ship-cards` | Builds cards with sub-agents in worktrees, verifies, pushes (optionally bugs to production, features to staging), updates Trello and cleans up; a card that stops after it's built keeps its worktree, and the next run resumes it instead of rebuilding |
 
@@ -26,6 +26,7 @@ cp -R skills/* /path/to/project/.claude/skills/
 The skills read project details from the project's CLAUDE.md. Add a section covering:
 
 - Trello board, its Not Ready / Ready To Start / Doing / Done lists, and a fallback reviewer for cards you create
+- Optional: a separate Needs input list for cards with open questions (defaults to Not Ready) and a Needs input owner who becomes the only member of those cards
 - GitHub `<owner>/<repo>`, trunk branch, and any long-lived branch to keep in sync (e.g. `preview`)
 - Install, lint, typecheck, unit test, build and dev server commands, plus the ports agents may use
 - Design system doc, if any
