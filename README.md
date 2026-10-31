@@ -54,7 +54,7 @@ When the project settings name a staging branch, a bug label and a "Done in stag
 Unattended runs push without anyone watching, so only turn this on with standing approval in the project's CLAUDE.md, saying where cards may be pushed. The report looks like:
 
 ```
-SUBJECT: Triage cards: 1 bug shipped, 1 feature shipped, 1 not ready
+SUBJECT: Triage: 1 bug, 1 feature shipped, 1 not ready (#12, #14, #15)
 
 ✅ Nothing to do
 

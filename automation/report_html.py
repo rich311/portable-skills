@@ -157,7 +157,7 @@ def ship_html(blocks, preview_url, ship_url):
 
 def report_to_html(subject, text, now=None, preview_url=None, ship_url=None):
     now = now or datetime.now()
-    headline = re.sub(r"^Triage cards:\s*", "", subject)
+    headline = re.sub(r"^Triage[^:]*:\s*", "", subject)
     when = now.strftime("%A, %B %-d at %-I:%M %p")
     rows = []
     blocks = parse_report(text)

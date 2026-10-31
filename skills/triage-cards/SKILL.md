@@ -39,7 +39,7 @@ quote that approval before pushing. In this mode:
   Plain text, no tables, no other text before or after.
 
   ```
-  SUBJECT: Triage cards: <counts, e.g. 1 feature shipped / 3 bugs shipped, 1 feature shipped, 2 not ready, 1 failure>
+  SUBJECT: Triage: <counts> (<cards>)
 
   ✅ Nothing to do
 
@@ -56,6 +56,13 @@ quote that approval before pushing. In this mode:
   ```
 
   Rules:
+  - Subject: `<counts>` is short, e.g. `1 feature shipped`, `8 bugs, 2
+    features shipped, 1 not ready`, `1 failure`. `<cards>` is every card the
+    report lists, by number, most important first (failures, then shipped,
+    then not ready): up to three, then `+N` for the rest, e.g.
+    `(#12, #14, #15 +8)`. The hourly job adds the day and hour after
+    "Triage" (e.g. `Triage Sat 4pm:`) so Gmail never threads two reports
+    together; don't add a date yourself.
   - First line after the subject: `✅ Nothing to do` when nothing needs the
     user. Otherwise one `❌` line per failure: what failed, the card link if
     there is one, and what the user needs to do to fix it.

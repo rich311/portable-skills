@@ -110,10 +110,13 @@ if [ -n "$SUBJECT_LINE" ]; then
   SUBJECT="${SUBJECT_LINE#*:SUBJECT: }"
   tail -n +$((${SUBJECT_LINE%%:*} + 1)) "$REPORT" | sed '/./,$!d' >"$EMAIL_BODY"
 else
-  SUBJECT="Triage cards: ❌ the run ended without a report"
+  SUBJECT="Triage: ❌ the run ended without a report"
   { echo "❌ The run ended without its report. Full output below, and the log is in $LOG"; echo; cat "$REPORT"; } >"$EMAIL_BODY"
 fi
 [ "$STATUS" -ne 0 ] && SUBJECT="$SUBJECT (run failed, exit $STATUS)"
+# Gmail threads emails with matching subjects, so stamp the day and hour after "Triage".
+WHEN="$(date '+%a %-I%p' | tr 'APM' 'apm')"
+SUBJECT="Triage $WHEN: $(printf '%s' "$SUBJECT" | sed -E 's/^Triage( cards)?: *//')"
 if [ -n "$REPORT_TO" ]; then
   python3 "$SELF_DIR/send-report.py" "$SUBJECT" "$EMAIL_BODY" || echo "email failed"
 else
