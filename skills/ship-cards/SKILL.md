@@ -79,8 +79,19 @@ How it works:
 ## Staged releases (optional)
 
 Only when the project settings define a staging branch, a bug label and a
-"Done in staging" list. Each card then ships one of two ways:
-- **Bug card** (it has the bug label): built from `origin/<trunk>`, pushed
+"Done in staging" list. Each card then ships one of two ways.
+
+**Which cards are bugs.** A card is a bug when any of these is true: it has
+the bug label, its name starts with "Bug" (for example "Bug: ..." or
+"Bug - ..."), or its description follows the bug template (it has the
+"Reproduction steps", "Expected Behavior" and "Actual Behavior" headings,
+or whatever headings the project's bug template uses). Decide this in
+step 1, before building. When a card counts as a bug but has no bug label,
+add the label right away (keep its existing labels) and note "labelled
+Bug" on its report line, so a missing label never sends a bug to staging
+only.
+
+- **Bug card**: built from `origin/<trunk>`, pushed
   to the trunk (production) and synced to staging, with any production
   migrations or scripts per step 5. The card goes to **Done**.
 - **Feature card** (every other card): pushed to the staging branch only.
