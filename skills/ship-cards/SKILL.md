@@ -407,8 +407,14 @@ dry run, don't make it:
 3. If the project has a long-lived branch to keep in sync (e.g. `preview`):
    fast-forward it with `git push origin origin/main:refs/heads/<branch>`
    when `origin/<branch>` is an ancestor of `origin/main`, otherwise merge
-   `main` into it in a worktree, push that, and stop on conflicts. Never
-   force-push it.
+   `main` into it in a worktree and push that. Never force-push it.
+   Resolve merge conflicts yourself: resolve each hunk so both main's fix
+   and the branch's feature survive, run lint, type check, unit tests and
+   the build, and push when they pass. Report the conflicted files and a
+   one-line resolution each as a warning. Stop and hand off (keep the
+   worktree, name the branch and the exact push command) only when a
+   conflicted file is a migration, a dependency manifest or lockfile, an env
+   file or a CI workflow, or verification still fails after the resolution.
 4. **Feature cards (staged releases)** skip steps 6.1 to 6.3: from the
    feature integration worktree, `git fetch origin <staging>`, merge it in if
    it moved (and re-run lint, typecheck, unit tests and the build), check

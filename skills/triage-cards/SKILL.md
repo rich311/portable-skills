@@ -28,10 +28,13 @@ quote that approval before pushing. In this mode:
 - Never call `AskUserQuestion`. In step 2, ship every Ready card even when
   other cards have questions; those get their question comments as usual.
 - Skip the push notification in step 3 (the email replaces it).
-- Anything that would normally wait for the user (a permission block, a
-  merge conflict on a synced branch, another session's commits on the trunk,
-  a failed check that can't be fixed) stops only the affected card or step.
-  Record it as a failure and carry on with the rest.
+- Anything that would normally wait for the user (a permission block,
+  another session's commits on the trunk, a failed check that can't be
+  fixed) stops only the affected card or step. Record it as a failure and
+  carry on with the rest. A merge conflict on a synced branch is not a
+  failure: resolve it, verify and push as ship-cards step 6.3 says, and
+  report the conflicted files as a warning (a failure only in the hand-off
+  cases listed there).
 - Don't narrate progress ("the agent is running", "waiting on the review").
   Only the final message matters, and it must be exactly the report below,
   starting with the `SUBJECT:` line. The scheduled job emails everything
