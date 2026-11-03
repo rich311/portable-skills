@@ -83,10 +83,16 @@ echo $$ >"$LOCK/pid"
 trap 'rm -rf "$LOCK"' EXIT
 
 GATE_PROMPT="Use $TRELLO_GATE_TOOL with listId $TRELLO_READY_LIST. Count the open cards whose idMembers is exactly [\"$TRELLO_MEMBER_ID\"] (that member and nobody else), leaving out any card with a label named Manual or a name starting with Chore. Reply with one line only: COUNT=<number>. If the Trello call fails, reply COUNT=ERROR."
-GATE="$(claude -p "$GATE_PROMPT" --model haiku --permission-mode dontAsk \
-  --allowedTools "$TRELLO_GATE_TOOL" --output-format text 2>&1)"
-echo "gate: $GATE"
-COUNT="$(printf '%s' "$GATE" | grep -oE 'COUNT=[0-9A-Z]+' | tail -1 | cut -d= -f2)"
+# A failed gate (usually a brief network outage) is retried a few times before falling back to a
+# full triage run, so a blip doesn't cost a long run and a pointless email.
+for ATTEMPT in 1 2 3; do
+  GATE="$(claude -p "$GATE_PROMPT" --model haiku --permission-mode dontAsk \
+    --allowedTools "$TRELLO_GATE_TOOL" --output-format text 2>&1)"
+  echo "gate (try $ATTEMPT): $GATE"
+  COUNT="$(printf '%s' "$GATE" | grep -oE 'COUNT=[0-9A-Z]+' | tail -1 | cut -d= -f2)"
+  if [ -n "$COUNT" ] && [ "$COUNT" != "ERROR" ]; then break; fi
+  [ "$ATTEMPT" -lt 3 ] && sleep 120
+done
 
 if [ "$COUNT" = "0" ]; then
   echo "no cards, done"
@@ -114,6 +120,15 @@ else
   { echo "❌ The run ended without its report. Full output below, and the log is in $LOG"; echo; cat "$REPORT"; } >"$EMAIL_BODY"
 fi
 [ "$STATUS" -ne 0 ] && SUBJECT="$SUBJECT (run failed, exit $STATUS)"
+# A clean run with nothing to report (only "Nothing to do" and "Repo state clean") isn't worth an
+# email; it happens when the gate couldn't count cards and the full run then found none.
+if [ "$STATUS" -eq 0 ] && [ -n "$SUBJECT_LINE" ] && grep -q . "$EMAIL_BODY" \
+  && ! grep -vxE '✅ Nothing to do|✅ Repo state clean|[[:space:]]*' "$EMAIL_BODY" >/dev/null; then
+  echo "nothing to report, no email"
+  find "$LOG_DIR" -type f \( -name '*.log' -o -name '*-report.txt' -o -name '*-email.txt' \) -mtime +14 -delete
+  echo "== $(date) done"
+  exit 0
+fi
 # Gmail threads emails with matching subjects, so stamp the day and hour after "Triage".
 WHEN="$(date '+%a %-I%p' | tr 'APM' 'apm')"
 SUBJECT="Triage $WHEN: $(printf '%s' "$SUBJECT" | sed -E 's/^Triage( cards)?: *//')"

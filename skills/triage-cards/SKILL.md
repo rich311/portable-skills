@@ -67,7 +67,8 @@ quote that approval before pushing. In this mode:
     "Triage" (e.g. `Triage Sat 4pm:`) so Gmail never threads two reports
     together; don't add a date yourself.
   - First line after the subject: `✅ Nothing to do` when nothing needs the
-    user. Otherwise one `❌` line per failure: what failed, the card link if
+    user. (The hourly runner sends no email for a report that is only
+    `✅ Nothing to do` and `✅ Repo state clean`.) Otherwise one `❌` line per failure: what failed, the card link if
     there is one, and what the user needs to do to fix it.
   - Shipped to Prod holds cards pushed to production, Shipped to Preview
     cards pushed to the staging branch only (use the project's name for it),
