@@ -26,6 +26,9 @@ via `package.json`) and only ask the user for what you can't find:
 - **Commands:** install, lint, typecheck, unit tests, build, dev server
   (and which ports agents may use; never the user's own dev port), and the
   folder unit tests go in.
+- **Deploy check (optional):** a command that confirms the hosting provider
+  built each pushed branch and starts the build when a push event was missed
+  (see step 6.5).
 - **Design:** the design system or style guide doc, if any.
 - **Test accounts:** non-production logins for each role, where the
   password comes from (an env var, never printed), and how to reset the test
@@ -421,6 +424,17 @@ dry run, don't make it:
    `git log --oneline origin/<staging>..HEAD` shows only this run's commits,
    then `git push origin HEAD:refs/heads/<staging>` (no force). Never push a
    feature card's commits to the trunk.
+5. **Confirm the host built every branch you pushed** (only when the project
+   settings name a deploy check command): run it in the background for each
+   pushed branch. Git hosts occasionally drop push events, and then the
+   hosting provider never builds and production silently stays on the old
+   code. The command should wait a few minutes for a build of the branch's
+   head commit, start the build itself through the provider's API when none
+   appears, and wait for it to finish. A self-started build that succeeds is
+   a warning line in the report; a failed or unstartable build is a failure
+   line with the deploy URL, and production scripts that depend on the new
+   code wait until it is live. Only hand the user a manual "redeploy" step
+   when the command itself could not start the build.
 
 ## 7. Trello updates (after the push)
 
