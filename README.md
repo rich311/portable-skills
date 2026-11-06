@@ -41,6 +41,8 @@ The skills read project details from the project's CLAUDE.md. Add a section cove
 
 When the project settings name a staging branch, a bug label and a "Done in staging" list, `ship-cards` ships bug cards to the trunk (production) and syncs staging, and ships every other card to staging only, moving it to the Done in staging list. Feature migrations go to the staging database only. A separate promote step (for example a manually run GitHub Actions workflow) ships all of staging to production at once, applies the batch's migrations, and moves the Done in staging cards to Done. Feature migrations must be safe to apply before their code.
 
+When the project settings name a Dependabot label, `triage-cards` starts every run by logging a bug card (bug and Dependabot labels) for each `origin/dependabot/*` branch that has no card yet, so dependency security updates ship through `ship-cards` like any other bug. The card says to reproduce the version changes with the package manager rather than merging Dependabot's commit; Dependabot then closes its own pull request.
+
 ## Scheduled triage (optional)
 
 `automation/` runs `/triage-cards unattended` on a schedule and emails the report:

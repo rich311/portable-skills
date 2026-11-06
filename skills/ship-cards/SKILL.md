@@ -206,6 +206,11 @@ trunk), then the feature cards on top of the freshly synced staging branch.
   (file and test names, or why none), and exact Playwright verification
   steps (URLs, viewport, selectors, test data ids from read-only queries).
 - Every agent prompt must also include the **testing rules**:
+  - **Dependabot cards** (logged by `triage-cards` step 0) are the one
+    exception to the next rule: a version-only update needs no new test,
+    since lint, type checks, unit tests, the build and the dev server check
+    are the test. Follow the card's "How to apply" section. Code changes
+    made for a breaking change still get tests.
   - **Bug cards: at least one regression unit test, always.** It must fail
     on the old code and pass with the fix (check by running it before the
     fix, or by temporarily reverting the fix). If the buggy logic is buried
@@ -247,7 +252,8 @@ When each report arrives:
    (and the mock's elements, when there is one), has no behavior regressions,
    and doesn't silently drop features (e.g. a removed page that held a
    banner).
-   Check the tests too: every bug card has a regression unit test that
+   Check the tests too: every bug card (except a version-only Dependabot
+   card) has a regression unit test that
    targets the actual root cause (not just a happy path near it), feature
    logic has unit tests, and any integration or end-to-end test is justified
    by real risk. Send missing or weak tests back to the agent.

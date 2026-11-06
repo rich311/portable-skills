@@ -88,6 +88,46 @@ quote that approval before pushing. In this mode:
     <what>`. Worktrees kept for resume don't count as needing cleaning; list
     them as `⚠️ Kept for resume: #<n> on <branch>`.
 
+## 0. Log a card for each new Dependabot update
+
+Only when the project settings name a Dependabot label. Every Dependabot
+pull request becomes a normal bug card, so it shows on the board and ships
+through `ship-cards` like any other bug. Do this before step 1 in every run
+(unattended included), whatever cards the user named.
+
+1. `git fetch -q --prune origin`, then
+   `git for-each-ref --format='%(refname:short)' refs/remotes/origin/dependabot/`.
+   Each branch is one open Dependabot pull request. None: skip this step.
+2. For each branch, read its commit message (`git log -1 --format=%B
+   <branch>`). The subject is the card title. The `updated-dependencies:`
+   trailer lists each `dependency-name`, `dependency-version` and
+   `dependency-type`; the old versions are in the "from X to Y" lines.
+3. **Skip a branch that already has a card:** any card on the board's open
+   lists (done lists included) with the Dependabot label whose description
+   contains the branch name. A done card whose branch still exists just
+   means Dependabot hasn't closed the pull request yet.
+4. Otherwise create the card in Ready To Start with the bug and Dependabot
+   labels, the user as its only member, the name
+   `Bug: Dependabot: <commit subject>`, and the project's bug template
+   filled in: reproduction steps naming the branch, a link to its pull
+   request (`https://github.com/<owner>/<repo>/pulls?q=is%3Apr+head%3A<branch>`)
+   and one line per package (old to new version, dependency type); expected
+   "we run the fixed versions"; actual "we run versions with a known
+   vulnerability"; and a **How to apply** section: on a branch from the
+   default branch, make the same version changes with the package manager
+   (install the new version of a direct dependency keeping the manifest's
+   range style, update an indirect one) and check the lockfile resolves
+   exactly those versions. Never check out or cherry-pick the Dependabot
+   branch's files or commit: the commit must be ours, and the lockfile may
+   have moved on. Fix any code a breaking change needs. Once it lands,
+   Dependabot closes its pull request and deletes the branch by itself.
+5. Add the new cards to this run's card list so they are assessed and
+   shipped in this same run. A version-only update needs no new regression
+   test (lint, type checks, unit tests, the build and the dev server check
+   are the test); a framework or runtime package (the web framework, UI
+   library, auth client, compiler) gets a dev server check of login and one
+   page per role at both sizes.
+
 ## 1. Assess every card once
 
 **Default scope.** If the user names no cards or list, triage the cards in
