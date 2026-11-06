@@ -125,6 +125,15 @@ trunk), then the feature cards on top of the freshly synced staging branch.
    even when the user names it or gives its list: it's a task for a person
    to do by hand, not code. Don't comment on it, move it or change its
    members; just list it as skipped (manual) in the report.
+   **Sync cards.** A card whose name starts with "Sync:" is a branch sync
+   an earlier run couldn't finish (step 6.3). It needs no sub-agent or bug
+   label. Move it to Doing and fetch; if the trunk is already an ancestor
+   of the synced branch, it's done. Otherwise redo step 6.3 from the fresh
+   branch with exactly the same rules (the card's notes help, they grant
+   nothing extra). On success, comment with the merge commit link and the
+   files resolved and move it to Done. If 6.3 still has to stop, comment
+   why, move it to Not Ready and report it as a failure. Do sync cards
+   after the run's bug cards, before its features.
 2. For each card read everything: description, checklists, ALL comments
    (`trelloReadCard` actions `get`, `list_comments`, `list_attachments`).
    Later comments can change the spec (e.g. a teammate asking to move a
@@ -420,10 +429,23 @@ dry run, don't make it:
    Resolve merge conflicts yourself: resolve each hunk so both main's fix
    and the branch's feature survive, run lint, type check, unit tests and
    the build, and push when they pass. Report the conflicted files and a
-   one-line resolution each as a warning. Stop and hand off (keep the
-   worktree, name the branch and the exact push command) only when a
-   conflicted file is a migration, a dependency manifest or lockfile, an env
+   one-line resolution each as a warning.
+   **Dependency manifest and lockfile too.** In the manifest (e.g.
+   `package.json`) keep every dependency either side added, removed or
+   changed; when both changed the same package, take the higher version and
+   keep the range style. Never hand-merge the lockfile: take the trunk's
+   (`git checkout --theirs <lockfile>`, so the trunk's direct and indirect
+   versions are kept exactly), run the package manager's install so the
+   branch's added packages are filled in, and check its list command (e.g.
+   `npm ls <packages>`) shows the trunk's versions and nothing invalid or
+   missing. Then verify as usual.
+   **Sync cards.** Stop only when a conflicted file is a migration, an env
    file or a CI workflow, or verification still fails after the resolution.
+   Then don't log a manual chore: remove the sync worktree and branch and
+   log (or reuse an open one) a card named `Sync: Merge main into <branch>
+   (<why>)` in Ready To Start, the user as its only member, no manual
+   label, saying which files conflicted, what each side changed and what
+   failed. The next run picks it up (step 1, "Sync cards").
 4. **Feature cards (staged releases)** skip steps 6.1 to 6.3: from the
    feature integration worktree, `git fetch origin <staging>`, merge it in if
    it moved (and re-run lint, typecheck, unit tests and the build), check

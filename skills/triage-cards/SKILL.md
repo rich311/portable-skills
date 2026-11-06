@@ -143,6 +143,10 @@ even when the user names it or gives its list: it's a task for a person
 to do by hand, not code. Don't comment on it, move it or change its
 members; leave it out of the report.
 
+**Sync cards.** A card whose name starts with "Sync:" (a branch sync an
+earlier run couldn't finish) is always Ready: don't send it to
+`assess-cards`, pass it straight to `ship-cards` (step 1, "Sync cards").
+
 Run the `assess-cards` skill (via the Skill tool) on the full list. It reads
 each card, its comments and mocks, grounds it in the current app and returns
 a verdict per card:
