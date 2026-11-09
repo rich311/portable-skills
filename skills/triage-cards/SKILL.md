@@ -139,7 +139,7 @@ overrides this default. Pass the resolved card list to `assess-cards` and
 
 **Interrupted builds.** Also run `git worktree list` and look for an
 interrupted build as `ship-cards` step 1.6 defines it (an `agent-*`
-worktree with `Card #<n>` commits, no process in it, its cards in the
+worktree with `Card #<n>` commits, no process in it, nothing changed in it for 90 minutes, its cards in the
 in-progress list with only the default member). Its cards are already
 assessed: add them to the list for `ship-cards` as Ready, even when the
 ready list is empty, so the run resumes them instead of stranding them.

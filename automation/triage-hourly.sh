@@ -101,6 +101,9 @@ ORPHANS=0
 while IFS= read -r WT; do
   case "$WT" in */.claude/worktrees/agent-*) ;; *) continue ;; esac
   lsof -d cwd -Fn 2>/dev/null | grep -qF "$WT" && continue
+  # An interactive session working there runs short commands, so lsof can miss it: also skip any
+  # worktree with a file changed in the last 90 minutes (2026-11-09, a run picked up live work).
+  [ -n "$(find "$WT" \( -name node_modules -o -name '.next*' \) -prune -o -type f -mmin -90 -print 2>/dev/null | head -1)" ] && continue
   git -C "$WT" log --format=%s origin/main..HEAD 2>/dev/null | grep -qE '^Card #[0-9]+' \
     && { echo "interrupted build worktree: $WT"; ORPHANS=1; }
 done < <(git -C "$REPO" worktree list --porcelain | awk '/^worktree /{print substr($0,10)}')

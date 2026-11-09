@@ -195,7 +195,11 @@ trunk), then the feature cards on top of the freshly synced staging branch.
    **Interrupted build (no marker).** A headless run can be cut off while
    its build agent is still working, leaving no marker. Treat a
    `.claude/worktrees/agent-*` worktree as this run's to resume when no
-   process is in it (the `lsof` check), every commit in
+   process is in it (the `lsof` check), no file in it (outside
+   node_modules and build output) changed in the last 90 minutes
+   (`find <worktree> \( -name node_modules -o -name '.next*' \) -prune -o
+   -type f -mmin -90 -print` prints nothing; an interactive session's short
+   commands don't show up in `lsof`), every commit in
    `<base>..HEAD` is named `Card #<n>: ...`, and each of those cards (plus
    any card its uncommitted files plainly belong to) is in the in-progress
    list with only the default member. Take those cards into this run even
