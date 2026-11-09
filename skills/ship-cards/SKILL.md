@@ -191,7 +191,21 @@ trunk), then the feature cards on top of the freshly synced staging branch.
    agent the existing worktree (`Agent`, `model: "sonnet"`, no `isolation`,
    told to work only in `<worktree>`) with the card spec and that change to
    make; otherwise go straight to step 3 and review its diff like any
-   agent's work. A worktree or branch with commits for this card but NO
+   agent's work.
+   **Interrupted build (no marker).** A headless run can be cut off while
+   its build agent is still working, leaving no marker. Treat a
+   `.claude/worktrees/agent-*` worktree as this run's to resume when no
+   process is in it (the `lsof` check), every commit in
+   `<base>..HEAD` is named `Card #<n>: ...`, and each of those cards (plus
+   any card its uncommitted files plainly belong to) is in the in-progress
+   list with only the default member. Take those cards into this run even
+   if they weren't in its list, `git -C <worktree> merge origin/<base>`,
+   and give a Sonnet agent the existing worktree (no `isolation`, told to
+   work only in `<worktree>`, keep the existing commits and finish the
+   cards that aren't committed yet, one commit per card). Then carry on
+   from step 3 for all of them. A worktree that fails these checks is
+   still another session's (below).
+   A worktree or branch with commits for this card but NO
    marker, or one that fails any check above, belongs to another session:
    never touch it, build fresh, and report it under "Out of the ordinary".
    The check is one `git worktree list` per run, so it costs next to nothing

@@ -94,7 +94,18 @@ for ATTEMPT in 1 2 3; do
   [ "$ATTEMPT" -lt 3 ] && sleep 120
 done
 
-if [ "$COUNT" = "0" ]; then
+# A run whose build agent was cut off leaves an agent-* worktree with card commits and no process
+# in it. Its cards sit in the in-progress list, which the gate doesn't count, so look for one here
+# and run triage anyway; ship-cards step 1.6 resumes it.
+ORPHANS=0
+while IFS= read -r WT; do
+  case "$WT" in */.claude/worktrees/agent-*) ;; *) continue ;; esac
+  lsof -d cwd -Fn 2>/dev/null | grep -qF "$WT" && continue
+  git -C "$WT" log --format=%s origin/main..HEAD 2>/dev/null | grep -qE '^Card #[0-9]+' \
+    && { echo "interrupted build worktree: $WT"; ORPHANS=1; }
+done < <(git -C "$REPO" worktree list --porcelain | awk '/^worktree /{print substr($0,10)}')
+
+if [ "$COUNT" = "0" ] && [ "$ORPHANS" = "0" ]; then
   echo "no cards, done"
   exit 0
 fi
@@ -103,6 +114,10 @@ if [ -z "$COUNT" ] || [ "$COUNT" = "ERROR" ]; then
 fi
 
 REPORT="$LOG_DIR/$STAMP-report.txt"
+# Headless Claude stops background sub-agents 10 minutes after the orchestrator's last turn, which
+# can kill a build agent mid-card. Give them 55 minutes; the lock above keeps the next run from
+# overlapping.
+export CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS=3300000
 claude -p "/triage-cards unattended" --permission-mode auto --output-format text >"$REPORT" 2>&1
 STATUS=$?
 echo "triage-cards exit $STATUS"
