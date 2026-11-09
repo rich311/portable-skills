@@ -586,8 +586,17 @@ with the two sections below.
    work.
 2. **Extra checks repo-state doesn't cover:** any long-lived branch is
    synced (`git merge-base --is-ancestor origin/main origin/<branch>`),
-   `git ls-remote --heads origin` shows no branch this run created, the run's
-   dev server port is free, and no `.verify-tmp.mjs`, `.qa-tmp-*.mjs` or
+   `git ls-remote --heads origin` shows no branch this run created.
+   **Stray origin branch** (any other branch besides the long-lived ones and
+   bot branches such as Dependabot's): after `git fetch origin --prune`, if
+   `git rev-list --count origin/main..origin/<branch>` is `0` it's fully
+   merged and can't hold lost work, so delete it yourself
+   (`git push origin --delete <branch>`, no approval needed, whoever made
+   it), confirm with `git ls-remote --heads origin` and report
+   `✅ Deleted merged stray branch <branch>`. Only a branch with commits
+   not on `main` becomes a `⚠️` line and a manual chore (name the branch, its
+   unmerged commit count and latest commit subject); never delete that one.
+   Also check the run's dev server port is free, and no `.verify-tmp.mjs`, `.qa-tmp-*.mjs` or
    separate build output dir is left behind.
 3. End the step 9 report with:
    - **Repo state:** a single line `✅ Repo state` when repo-state is
