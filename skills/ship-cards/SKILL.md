@@ -416,7 +416,12 @@ dry run, don't make it:
    expects).
 3. **Dry run:** migrations with the project's dry-run command against
    production (e.g. `supabase db push --dry-run` after linking the
-   production project); it must list exactly this run's migrations. Scripts
+   production project); it must list exactly this run's migrations. Make
+   sure the migration tool gets the production database credentials, not
+   the local env file's (which usually point at a dev or staging database):
+   pass the production password through the environment for every
+   production push, dry run and real run alike, read from wherever the
+   project keeps it and never printed. Scripts
    in their production dry-run mode; the output must match what you expect
    (counts and every proposed change). If anything is unexpected, stop and
    fix it first.
