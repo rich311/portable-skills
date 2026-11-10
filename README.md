@@ -46,7 +46,7 @@ When the project settings name a Dependabot label, `triage-cards` starts every r
 
 ## Cloud sessions (optional)
 
-`automation/cloud-setup.sh` prepares a Claude Code on the web session: it writes the local env file from an allowlist of the cloud environment's variables (non-production only, refusing any value that matches the production marker) and installs dependencies. Set the cloud environment's setup script to `bash automation/cloud-setup.sh --cloud` (or copy it into the project's `scripts/`). Settings come from `.claude/cloud-setup.conf` in the project. `ship-cards` then runs in cloud mode, which never changes production.
+`automation/cloud-setup.sh` prepares a Claude Code on the web session: it writes the local env file from an allowlist of the cloud environment's variables (non-production only, refusing any value that matches the production marker) and installs dependencies. Copy it into the project (e.g. `scripts/cloud-setup.sh`) and run it from a `SessionStart` hook in the project's `.claude/settings.json` (`"command": "\"$CLAUDE_PROJECT_DIR\"/scripts/cloud-setup.sh"`, matcher `startup`, timeout 600). Hooks start in the project folder; the cloud environment's setup-script field does not run inside the clone, so a relative path there fails. On a local machine the script does nothing unless `CLAUDE_CODE_REMOTE` is `true`, `--cloud` is passed, or the machine runs Linux (drop that last check if you work locally on Linux). Settings come from `.claude/cloud-setup.conf` in the project. `ship-cards` then runs in cloud mode, which never changes production.
 
 ## Scheduled triage (optional)
 

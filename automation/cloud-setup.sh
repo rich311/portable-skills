@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Prepare a Claude Code on the web session for the card skills. Does nothing locally unless run with
-# --cloud (it otherwise needs CLAUDE_CODE_REMOTE=true). Never prints a secret value.
+# Prepare a Claude Code on the web session for the card skills. Run it from a SessionStart hook.
+# Never prints a secret value.
 #
 # Reads .claude/cloud-setup.conf from the project root, a bash file setting:
 #   KEYS=(NAME ...)          env vars copied into the env file (non-production only)
@@ -12,7 +12,8 @@
 #   INSTALL_CMD="npm ci"     run when node_modules is missing (optional)
 #   EXTRA_SETUP="..."        any other setup command, e.g. installing CLIs (optional)
 set -uo pipefail
-[ "${CLAUDE_CODE_REMOTE:-}" = "true" ] || [ "${1:-}" = "--cloud" ] || exit 0
+# Cloud = CLAUDE_CODE_REMOTE, --cloud, or Linux (remove the Linux check if you work locally on Linux).
+[ "${CLAUDE_CODE_REMOTE:-}" = "true" ] || [ "${1:-}" = "--cloud" ] || [ "$(uname -s)" = "Linux" ] || exit 0
 
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 cd "$ROOT" || exit 0
