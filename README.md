@@ -48,6 +48,16 @@ When the project settings name a Dependabot label, `triage-cards` starts every r
 
 `automation/cloud-setup.sh` prepares a Claude Code on the web session: it writes the local env file from an allowlist of the cloud environment's variables (non-production only, refusing any value that matches the production marker) and installs dependencies. Copy it into the project (e.g. `scripts/cloud-setup.sh`) and run it from a `SessionStart` hook in the project's `.claude/settings.json` (`"command": "\"$CLAUDE_PROJECT_DIR\"/scripts/cloud-setup.sh"`, matcher `startup`, timeout 600). Hooks start in the project folder; the cloud environment's setup-script field does not run inside the clone, so a relative path there fails. On a local machine the script does nothing unless `CLAUDE_CODE_REMOTE` is `true`, `--cloud` is passed, or the machine runs Linux (drop that last check if you work locally on Linux). Settings come from `.claude/cloud-setup.conf` in the project. `ship-cards` then runs in cloud mode, which never changes production.
 
+### Scheduled cloud triage and production changes (optional)
+
+Instead of a local launchd or cron job, the hourly triage can be a scheduled cloud routine running `/triage-cards unattended cloud`. The run checks the hour itself (cloud schedules are UTC), counts the waiting cards and stops early when there are none, so empty hours stay cheap.
+
+Things a cloud session can't do directly go through GitHub Actions, started with a small script that dispatches a workflow, waits, and reads its result:
+- **Production migrations**: a workflow holding the production database password does an exact-match dry run, then a re-checked apply. The session pushes the migration file to the trunk on its own first, runs the workflow, then pushes the code. Production keys never reach the cloud.
+- **The report email**: a workflow sends it over SMTP, since cloud networks may block mail servers.
+
+Lessons from setting it up: SessionStart hooks may not run in routine sessions, so the skill runs the setup script itself when the env file is missing; cloud networks may block hosting APIs and GitHub's job-log downloads, so workflows should only succeed when their result is good, letting the caller act on the run's conclusion alone; a fine-grained token needs Actions read/write (plus Checks read to see result annotations).
+
 ## Scheduled triage (optional)
 
 `automation/` runs `/triage-cards unattended` on a schedule and emails the report:
