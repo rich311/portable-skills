@@ -9,6 +9,32 @@ Never use em dashes anywhere (code, commits, Trello text, summaries). Trello
 writes post as the user, so write them in the first person and never name
 the user.
 
+## Cloud mode (optional)
+
+Only when the project settings allow cloud sessions (Claude Code on the web).
+A session is in cloud mode when `CLAUDE_CODE_REMOTE` is `true`. The cloud
+environment should hold non-production keys only; a setup script (see
+`automation/cloud-setup.sh`) writes the local env file from them and refuses
+production values. In cloud mode:
+- First check the env file exists and points at the non-production database.
+  If it's missing, run the setup script once; still missing: stop the whole
+  run with one `❌` line saying the cloud environment needs its keys.
+- **Nothing touches production.** No production migration, data script, SQL
+  write or hosting/database production setting, dry runs included. A card
+  that needs one is not pushed: give it a `❌` line ("needs a production
+  change, run it locally"), make the default assignee its only member and
+  move it back to Ready To Start so the next local run ships it. Other cards
+  ship as usual.
+- A cloud session's files vanish when it ends, so nothing is kept for resume
+  (step 9): finish a card or drop its work and report it.
+- If the cloud git proxy refuses a push to the trunk or staging branch, don't
+  work around it (no other branch, no API push): stop that push and report
+  `❌`.
+- Playwright uses the browser the setup script installed (no
+  `executablePath`). `lsof` may be missing: check ports with `ss -ltn`. Use
+  `cp -R` where macOS steps say `cp -c -R`.
+- Scheduled unattended runs (`automation/`) only run on a local machine.
+
 ## Project settings
 
 Everything project specific comes from the project's CLAUDE.md (and the docs

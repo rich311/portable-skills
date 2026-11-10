@@ -16,6 +16,11 @@ mode).
 
 Never use em dashes anywhere (Trello text or the chat summary).
 
+**Cloud sessions.** In a Claude Code on the web session, follow "Cloud mode"
+in `ship-cards`: non-production keys only, nothing touches production, and
+cards that need a production change go back to Ready To Start for a local
+run.
+
 ## Unattended mode
 
 When the arguments include `unattended`, nobody is watching: a scheduled job

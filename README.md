@@ -33,6 +33,7 @@ The skills read project details from the project's CLAUDE.md. Add a section cove
 - Non-production test accounts and the env var holding their password
 - Production and non-production database ids, and how migrations and data scripts do a dry run
 - Whether pushing and production changes have standing approval (otherwise `ship-cards` asks first)
+- Optional cloud sessions: whether Claude Code on the web may run these skills, the non-production env keys its environment holds, and a marker that identifies production values (see `automation/cloud-setup.sh`)
 - Optional staged releases: a staging branch, the bug label, a "Done in staging" list, and the workflow that promotes staging to production
 
 `repo-state/check.sh` takes `MAIN_BRANCH`, `KEEP_BRANCHES` (e.g. `"main preview"`) and `EXTRA_IGNORE` as env vars.
@@ -42,6 +43,10 @@ The skills read project details from the project's CLAUDE.md. Add a section cove
 When the project settings name a staging branch, a bug label and a "Done in staging" list, `ship-cards` ships bug cards to the trunk (production) and syncs staging, and ships every other card to staging only, moving it to the Done in staging list. Feature migrations go to the staging database only. A separate promote step (for example a manually run GitHub Actions workflow) ships all of staging to production at once, applies the batch's migrations, and moves the Done in staging cards to Done. Feature migrations must be safe to apply before their code.
 
 When the project settings name a Dependabot label, `triage-cards` starts every run by logging a bug card (bug and Dependabot labels) for each `origin/dependabot/*` branch that has no card yet, so dependency security updates ship through `ship-cards` like any other bug. The card says to reproduce the version changes with the package manager rather than merging Dependabot's commit; Dependabot then closes its own pull request.
+
+## Cloud sessions (optional)
+
+`automation/cloud-setup.sh` prepares a Claude Code on the web session: it writes the local env file from an allowlist of the cloud environment's variables (non-production only, refusing any value that matches the production marker) and installs dependencies. Set the cloud environment's setup script to `bash automation/cloud-setup.sh --cloud` (or copy it into the project's `scripts/`). Settings come from `.claude/cloud-setup.conf` in the project. `ship-cards` then runs in cloud mode, which never changes production.
 
 ## Scheduled triage (optional)
 
