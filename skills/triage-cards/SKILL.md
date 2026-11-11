@@ -21,6 +21,35 @@ in `ship-cards`: non-production keys only, nothing touches production, and
 cards that need a production change go back to Ready To Start for a local
 run.
 
+## Cloud unattended mode
+
+When the arguments include `unattended cloud`, a scheduled cloud routine
+started it (cloud schedules run in UTC). It does everything in Unattended
+mode below, with these steps around it. Most runs find no cards, so steps 1
+and 2 come first and stay cheap: one Bash call and one Trello call, no other
+reading (not this skill's later sections, not `ship-cards`, no repo files)
+and no environment setup until a card is in scope.
+1. **Hours.** In one Bash call, the hour in the user's time zone from the
+   project settings (`TZ=<zone> date +%H`), plus, when the project logs
+   Dependabot cards (step 0), `git fetch -q --prune origin` and a listing
+   of `refs/remotes/origin/dependabot/`. Outside the allowed hours (default
+   6 to before 22): end at once with the single line `Outside hours`. No
+   email.
+2. **Gate.** One Trello call listing Ready To Start. Count the open cards
+   in the default scope of step 1 (the user is the only member, leaving out
+   manual and chore cards). Zero cards and no Dependabot branches: end with
+   the single line `No cards`. No email. The Trello server should read its
+   keys from the cloud environment's variables so this needs no setup. A
+   failed Trello call: retry twice, then carry on so the report shows the
+   problem.
+3. **Setup.** Only now prepare the environment as "Cloud mode" in
+   `ship-cards` says (for example `automation/cloud-setup.sh`). If it can't
+   be fixed, the report is that one failure line (step 5 still emails it).
+4. **Triage** as Unattended mode says, ending with the report.
+5. **Email** the report the way the project's report sender does, with the
+   day and hour in the user's time zone in the subject. Send nothing when
+   the report only says there was nothing to do.
+
 ## Unattended mode
 
 When the arguments include `unattended`, nobody is watching: a scheduled job
