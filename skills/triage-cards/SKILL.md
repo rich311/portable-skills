@@ -50,9 +50,7 @@ and no environment setup until a card is in scope.
    cloud, usually `node scripts/gh-workflow.mjs email-report.yml
    subject="<subject>" body=@<file>`, since cloud networks may block SMTP),
    with the day and hour in the user's time zone in the subject. Send
-   nothing when the report only says there was nothing to do. The report's
-   status line says what happened: never `✅ Nothing to do` next to cards
-   that were shipped or assessed.
+   nothing when the report only says there was nothing to do.
 
 ## Unattended mode
 
