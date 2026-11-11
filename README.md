@@ -46,17 +46,38 @@ When the project settings name a Dependabot label, `triage-cards` starts every r
 
 ## Cloud sessions (optional)
 
-`automation/cloud-setup.sh` prepares a Claude Code on the web session: it writes the local env file from an allowlist of the cloud environment's variables (non-production only, refusing any value that matches the production marker) and installs dependencies. Copy it into the project (e.g. `scripts/cloud-setup.sh`) and run it from a `SessionStart` hook in the project's `.claude/settings.json` (`"command": "\"$CLAUDE_PROJECT_DIR\"/scripts/cloud-setup.sh"`, matcher `startup`, timeout 600). Hooks start in the project folder; the cloud environment's setup-script field does not run inside the clone, so a relative path there fails. On a local machine the script does nothing unless `CLAUDE_CODE_REMOTE` is `true`, `--cloud` is passed, or the machine runs Linux (drop that last check if you work locally on Linux). Settings come from `.claude/cloud-setup.conf` in the project. `ship-cards` then runs in cloud mode, which never changes production.
+The skills can run in Claude Code on the web, including as a scheduled cloud routine that replaces the local hourly job. The cloud session holds non-production keys only; anything that needs a production secret goes through GitHub Actions.
 
-### Scheduled cloud triage and production changes (optional)
+Files in `automation/` for this:
 
-Instead of a local launchd or cron job, the hourly triage can be a scheduled cloud routine running `/triage-cards unattended cloud`. The run checks the hour itself (cloud schedules are UTC), counts the waiting cards and stops early when there are none, so empty hours stay cheap.
+| File | Copy to | What it does |
+| --- | --- | --- |
+| `cloud-setup.sh` | `scripts/cloud-setup.sh` | Writes the env file from an allowlist of the cloud environment's variables (refusing anything that matches the production marker) and installs dependencies. Does nothing on a Mac unless `--cloud` is passed. Settings come from `.claude/cloud-setup.conf` (see the script's header). |
+| `settings.json.example` | merge into `.claude/settings.json` | Runs `cloud-setup.sh` from a `SessionStart` hook (the environment's setup-script field doesn't run inside the clone) and allows the Trello tools, denying archive and delete. |
+| `mcp.json.example` | `.mcp.json` | Gives cloud sessions the Trello MCP server, reading its keys from the cloud environment's variables. |
+| `gh-workflow.mjs` | `scripts/gh-workflow.mjs` | Starts a workflow, waits, and prints its `RESULT:` line. Repo from `GH_REPO` or the git remote, token from `GITHUB_PAT`. |
+| `workflows/email-report.yml` | `.github/workflows/` | Emails the report with `send-report.py` (cloud networks may block SMTP). Needs `send-report.py` and `report_html.py` in the repo (default `.claude/automation/`). |
+| `workflows/apply-prod-migrations.yml` | `.github/workflows/` | Production migrations: exact-match dry run, re-check, apply, confirm nothing pending. Written for the Supabase CLI. |
 
-Things a cloud session can't do directly go through GitHub Actions, started with a small script that dispatches a workflow, waits, and reads its result:
-- **Production migrations**: a workflow holding the production database password does an exact-match dry run, then a re-checked apply. The session pushes the migration file to the trunk on its own first, runs the workflow, then pushes the code. Production keys never reach the cloud.
-- **The report email**: a workflow sends it over SMTP, since cloud networks may block mail servers.
+### Setting it up
 
-Lessons from setting it up: SessionStart hooks may not run in routine sessions, so the skill runs the setup script itself when the env file is missing; cloud networks may block hosting APIs and GitHub's job-log downloads, so workflows should only succeed when their result is good, letting the caller act on the run's conclusion alone; a fine-grained token needs Actions read/write (plus Checks read to see result annotations).
+1. **Copy the files** above into the project and commit them. Fill in `.claude/cloud-setup.conf`, the Trello board id in `.mcp.json`, and `AUTOMATION_DIR` / `MIGRATIONS_DIR` in the workflows if yours differ.
+2. **GitHub**: add the repo secrets `SMTP_PASSWORD` and `PROD_DB_URL`, and the repo variables `REPORT_TO`, `SMTP_HOST`, `SMTP_USER`, `SMTP_FROM` (plus `SMTP_PORT`, `PREVIEW_URL`, `SHIP_URL` if wanted). Create a fine-grained token for this repo with Actions read/write and Checks read (without Checks the script can't read the result annotation and falls back to the run's conclusion).
+3. **Cloud environment** (claude.ai > Code > Environments): add the non-production keys `cloud-setup.sh` copies, `TRELLO_API_KEY`, `TRELLO_TOKEN` and `GITHUB_PAT`. Never production keys.
+4. **Network access** on the same environment: allow the non-production database and API hosts and the staging site. Leave production hosts blocked, so a mistake can't reach them. Check with a one-off routine that `curl`s each host (expect an auth error such as 401 from an API, not a 403 from the proxy).
+5. **CLAUDE.md**: say cloud sessions are allowed, which keys they hold, where unattended runs may push, and the user's time zone.
+6. **Routine** (claude.ai > Code > Routines, or `/schedule`): prompt `/triage-cards unattended cloud`, this repo, the environment above, no extra connectors. Cron is UTC and covers the allowed hours in your zone, for example `55 0-5,13-23 * * *` for 6:55am to 9:55pm Mountain. Start it once by hand and read the transcript before trusting the schedule.
+7. **Turn the local job off** (`launchctl unload` the plist or remove the cron line). Never run both.
+
+### Lessons from setting it up
+
+- **Gate before setup.** Most hours have no cards. The skill checks the hour and asks Trello for cards before installing anything, so an empty run takes about 20 seconds and 4 turns instead of over a minute.
+- **Scheduled times drift.** Runs start a few minutes after the cron time and that delay can't be set, so choose minute 55 rather than 0 if you want a run before the hour.
+- **Check the hour in the user's zone**, not UTC, and put it in the email subject.
+- **SessionStart hooks may not run in routine sessions**, so the skill runs the setup script itself when the env file is missing.
+- **Cloud networks block more than you expect**: SMTP, hosting APIs and GitHub's job log downloads. Workflows report through `::notice title=RESULT::` annotations and only succeed when the result is good, so the caller can act on the conclusion alone.
+- **Cloud-only test failures** happen when a test depends on a local env value (a site URL, say). Set it in the cloud environment or the test, not by skipping the test.
+- **Dev servers may write files** (Next.js writes `AGENTS.md`). Add them to `.gitignore` so they don't end up in commits.
 
 ## Scheduled triage (optional)
 

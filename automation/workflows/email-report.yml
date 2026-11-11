@@ -1,0 +1,57 @@
+name: Email triage report
+
+# Sends a cloud /triage-cards report by email, since cloud networks may block SMTP.
+# Copy to .github/workflows/ and start it with
+#   node scripts/gh-workflow.mjs email-report.yml subject="..." body=@report.txt
+# Uses automation/send-report.py and report_html.py, copied into the repo at AUTOMATION_DIR.
+#
+# Repo secret:    SMTP_PASSWORD
+# Repo variables: REPORT_TO, SMTP_HOST, SMTP_USER, SMTP_PORT (optional, default 587),
+#                 SMTP_FROM, PREVIEW_URL, SHIP_URL (optional)
+
+on:
+  workflow_dispatch:
+    inputs:
+      subject:
+        description: "Email subject"
+        required: true
+        type: string
+      body:
+        description: "Plain text report"
+        required: true
+        type: string
+
+run-name: "${{ inputs.subject }}"
+
+permissions:
+  contents: read
+
+env:
+  AUTOMATION_DIR: .claude/automation   # where send-report.py and report_html.py live in this repo
+
+jobs:
+  email:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: ${{ env.AUTOMATION_DIR }}
+
+      - name: Send
+        env:
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          REPORT_TO: ${{ vars.REPORT_TO }}
+          SMTP_HOST: ${{ vars.SMTP_HOST }}
+          SMTP_PORT: ${{ vars.SMTP_PORT || '587' }}
+          SMTP_USER: ${{ vars.SMTP_USER }}
+          SMTP_FROM: ${{ vars.SMTP_FROM }}
+          PREVIEW_URL: ${{ vars.PREVIEW_URL }}
+          SHIP_URL: ${{ vars.SHIP_URL }}
+          SUBJECT: ${{ inputs.subject }}
+          BODY: ${{ inputs.body }}
+        run: |
+          if [ -z "$SMTP_PASSWORD" ]; then echo "::error::SMTP_PASSWORD isn't set"; exit 1; fi
+          printf '%s\n' "$BODY" > "$RUNNER_TEMP/body.txt"
+          python3 "$AUTOMATION_DIR/send-report.py" "$SUBJECT" "$RUNNER_TEMP/body.txt"
+          echo "RESULT: sent to $REPORT_TO"
+          echo "::notice title=RESULT::sent to $REPORT_TO"

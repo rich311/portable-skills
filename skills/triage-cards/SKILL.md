@@ -46,9 +46,13 @@ and no environment setup until a card is in scope.
    `ship-cards` says (for example `automation/cloud-setup.sh`). If it can't
    be fixed, the report is that one failure line (step 5 still emails it).
 4. **Triage** as Unattended mode says, ending with the report.
-5. **Email** the report the way the project's report sender does, with the
-   day and hour in the user's time zone in the subject. Send nothing when
-   the report only says there was nothing to do.
+5. **Email** the report the way the project's report sender does (in the
+   cloud, usually `node scripts/gh-workflow.mjs email-report.yml
+   subject="<subject>" body=@<file>`, since cloud networks may block SMTP),
+   with the day and hour in the user's time zone in the subject. Send
+   nothing when the report only says there was nothing to do. The report's
+   status line says what happened: never `✅ Nothing to do` next to cards
+   that were shipped or assessed.
 
 ## Unattended mode
 

@@ -1,0 +1,94 @@
+name: Apply production migrations
+
+# Applies a card's database migrations to production without the production password ever
+# leaving GitHub. Written for the Supabase CLI; swap the two `supabase db push` calls for your
+# migration tool's dry run and apply. Copy to .github/workflows/.
+#
+# Cloud sessions (non-production keys only) start it with
+#   node scripts/gh-workflow.mjs apply-prod-migrations.yml expected="<file.sql> ..." apply=false|true
+# Order: push the migration file to the trunk on its own first (inert for the app), run this
+# from the trunk, then push the code that uses it. See "Cloud mode" in ship-cards.
+#   apply=false  dry run only: production's pending migrations must be exactly `expected`.
+#   apply=true   dry run again (the re-check), apply, then confirm nothing is left pending.
+# Anything pending that isn't in `expected` stops it before anything changes. It only succeeds
+# when the result is good, so a caller that can't read the RESULT line can act on the conclusion.
+#
+# Repo secret: PROD_DB_URL (the production connection string, password percent-encoded)
+
+on:
+  workflow_dispatch:
+    inputs:
+      expected:
+        description: "Migration files production should be missing, space separated"
+        required: true
+        type: string
+      apply:
+        description: "Apply them (false = dry run only)"
+        required: true
+        default: false
+        type: boolean
+      card:
+        description: "Card number, for the run name"
+        required: false
+        type: string
+
+run-name: "Prod migrations ${{ inputs.apply && 'APPLY' || 'dry run' }}${{ inputs.card && format(' for #{0}', inputs.card) || '' }}"
+
+permissions:
+  contents: read
+
+# Never two production database runs at once.
+concurrency:
+  group: prod-db
+  cancel-in-progress: false
+
+env:
+  MIGRATIONS_DIR: supabase/migrations
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Dry run, then apply if asked
+        env:
+          DB_URL: ${{ secrets.PROD_DB_URL }}
+          EXPECTED: ${{ inputs.expected }}
+          APPLY: ${{ inputs.apply }}
+        run: |
+          # The annotation is how cloud sessions read the result: their network may not download job logs.
+          result() { echo "RESULT: $*"; echo "::notice title=RESULT::$*"; echo "### $*" >> "$GITHUB_STEP_SUMMARY"; }
+          if [ -z "$DB_URL" ]; then result "error: PROD_DB_URL is not set. Nothing was changed."; exit 1; fi
+          WANT=$(echo "$EXPECTED" | tr ' ,' '\n\n' | sed '/^$/d' | xargs -r -n1 basename | sort -u)
+          if [ -z "$WANT" ]; then result "error: no expected migrations given. Nothing was changed."; exit 1; fi
+          for f in $WANT; do
+            [ -f "$MIGRATIONS_DIR/$f" ] || { result "error: $f is not on this branch. Push the migration file first. Nothing was changed."; exit 1; }
+          done
+          pending() {
+            local out
+            out=$(supabase db push --db-url "$DB_URL" --include-all --dry-run 2>&1) || { echo "$out" | sed -E 's#postgres(ql)?://[^ ]*#<connection string>#g' >&2; return 1; }
+            echo "$out" >&2
+            if echo "$out" | grep -qi "up to date"; then return 0; fi
+            echo "$out" | grep -qE '[0-9]+_[A-Za-z0-9_.-]+\.sql' || { echo "Couldn't read the dry run output" >&2; return 1; }
+            echo "$out" | grep -oE '[0-9]+_[A-Za-z0-9_.-]+\.sql' | sort -u
+          }
+          check() {
+            PENDING=$(pending) || { result "error: couldn't read production's migrations. Nothing was changed."; exit 1; }
+            if [ "$PENDING" != "$WANT" ]; then
+              result "mismatch: production pending [$(echo $PENDING)] but expected [$(echo $WANT)]. Nothing was changed."
+              exit 1
+            fi
+          }
+          check
+          echo "Dry run matches: $(echo $WANT)"
+          if [ "$APPLY" != "true" ]; then result "dry-run-ok: production would apply exactly [$(echo $WANT)]"; exit 0; fi
+          check   # the re-check right before applying
+          supabase db push --db-url "$DB_URL" --include-all --yes
+          LEFT=$(pending) || { result "error: applied, but couldn't re-check. Check production by hand before anything else."; exit 1; }
+          if [ -n "$LEFT" ]; then result "error: still pending after apply: [$(echo $LEFT)]"; exit 1; fi
+          result "applied: [$(echo $WANT)] are on production and nothing is left pending"

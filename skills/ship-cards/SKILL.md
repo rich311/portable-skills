@@ -19,12 +19,42 @@ production values. In cloud mode:
 - First check the env file exists and points at the non-production database.
   If it's missing, run the setup script once; still missing: stop the whole
   run with one `❌` line saying the cloud environment needs its keys.
-- **Nothing touches production.** No production migration, data script, SQL
-  write or hosting/database production setting, dry runs included. A card
-  that needs one is not pushed: give it a `❌` line ("needs a production
-  change, run it locally"), make the default assignee its only member and
-  move it back to Ready To Start so the next local run ships it. Other cards
-  ship as usual.
+- **The session itself never touches production.** It holds no production
+  key. Cards with no production change ship as usual (pushing code to the
+  trunk is fine when the host deploys it).
+- **Production migrations through GitHub Actions (optional).** When the
+  project has `automation/workflows/apply-prod-migrations.yml` (holding the
+  production password as a repo secret) and a `GITHUB_PAT` in the cloud
+  environment, a card's production migrations go through it with
+  `automation/gh-workflow.mjs`, which waits and prints the run's `RESULT:`
+  line. This replaces the local dry run and apply, in this order:
+  1. The migration must be safe to apply before its code. Apply it to the
+     non-production database as usual.
+  2. From a fresh trunk worktree, commit only the card's migration files as
+     `Card #<n>: migration <file>` and push them to the trunk. The file
+     alone changes nothing in the app.
+  3. Dry run: `node scripts/gh-workflow.mjs apply-prod-migrations.yml
+     expected="<file> ..." apply=false card=<n>`. It must exit 0 and print
+     `RESULT: dry-run-ok` naming exactly this card's files.
+  4. Apply: the same with `apply=true` (it re-checks first). It must exit 0
+     and print `RESULT: applied`.
+  5. Merge the new trunk into the card's worktree and push the code as usual.
+  The workflow only succeeds when the dry run matched exactly or the apply
+  left nothing pending, so `RESULT: detail unreadable from here, run
+  succeeded` with exit 0 still counts; say so in the card's report line. If
+  step 3 or 4 exits non-zero, stop: don't push the code, `git revert` the
+  migration commit and push the revert (unless step 4 got as far as
+  applying; then leave it and say so), and report the `RESULT:` line as the
+  card's `❌`.
+- **Every other production change needs a local run**: data scripts, SQL
+  writes, hosting or database production settings, and migrations when
+  there's no workflow or token. A card that needs one is not pushed: give it
+  a `❌` line ("needs a production change, run it locally"), make the
+  default assignee its only member and move it back to Ready To Start so the
+  next local run ships it. Other cards ship as usual.
+- **Bug cards still go live.** Cloud mode changes how production is reached,
+  not where cards go: a bug card ships to the trunk and moves to the Done
+  (production) list, never the "Done in staging" list.
 - A cloud session's files vanish when it ends, so nothing is kept for resume
   (step 9): finish a card or drop its work and report it.
 - If the cloud git proxy refuses a push to the trunk or staging branch, don't
@@ -33,7 +63,8 @@ production values. In cloud mode:
 - Playwright uses the browser the setup script installed (no
   `executablePath`). `lsof` may be missing: check ports with `ss -ltn`. Use
   `cp -R` where macOS steps say `cp -c -R`.
-- Scheduled unattended runs (`automation/`) only run on a local machine.
+- Scheduled unattended runs can be a cloud routine (see "Cloud unattended
+  mode" in `triage-cards`) or the local job in `automation/`; never both.
 
 ## Project settings
 
