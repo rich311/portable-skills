@@ -14,8 +14,13 @@ post as the user, in the first person, never naming the user.
 
 **Read the `add-card` skill first** (it must be installed alongside this
 one). Every card made here follows its project settings and steps 1 to 4
-exactly (classification, duplicate check, template, creation, the user as
-the only member). This skill only decides *which* cards to make.
+exactly (classification, duplicate check, template, creation, the card
+assignee as the only member). This skill only decides *which* cards to make.
+
+Every card it creates goes to add-card's **card assignee** as its only
+member, even when the source says someone else will do it ("Sam will look
+into that"). Put who took it on in the "From the ... call" line, never in
+the card's members.
 
 ## 1. Read the source
 

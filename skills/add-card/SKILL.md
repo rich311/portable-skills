@@ -1,6 +1,6 @@
 ---
 name: add-card
-description: Turn one request into a new Trello card in Ready To Start, assigned to the user. Classifies it as a bug (Bug template, bug label), a feature (Feature template plus an Acceptance Criteria checklist) or, when it's work a person has to do by hand and Claude can't, a chore (name "Chore: ...", manual label), then fills in every template section the request and the app can answer. Use when the user asks to "add a card", "log a bug", "make a card for", "put this on the board" or "create a chore".
+description: Turn one request into a new Trello card in Ready To Start, always assigned to the project's card assignee (default: the user) as its only member. Classifies it as a bug (Bug template, bug label), a feature (Feature template plus an Acceptance Criteria checklist) or, when it's work a person has to do by hand and Claude can't, a chore (name "Chore: ...", manual label), then fills in every template section the request and the app can answer. Use when the user asks to "add a card", "log a bug", "make a card for", "put this on the board" or "create a chore".
 ---
 
 # Add card
@@ -28,7 +28,10 @@ members) and use the names below:
 - Optional **Bug template** and **Feature template** cards. When the
   project names them, read them and mirror their headings exactly; never
   edit them. Otherwise use the default templates in step 3.
-- The user's Trello member id (the new card's only member).
+- The **card assignee**: the member every new card is assigned to, as its
+  only member, whoever runs the skill and whoever the request names as
+  doing the work (that person can go in the description, never in the
+  members). Defaults to the user's Trello member id.
 - The app's base URL, for bug reproduction steps.
 - Any services a person must handle by hand (vendor dashboards Claude has
   no access to), to help spot chores.
@@ -138,8 +141,8 @@ outcome starting "User is able to ..." or "<Thing> shows/does ...".
 2. Feature only: add an `Acceptance Criteria` checklist with its items.
 3. Attach any screenshot, video or mockup the user gave (as a file, never
    inline base64).
-4. Add the user as a member, then re-read the card and confirm the user is
-   its only member (remove anyone else).
+4. Always add the card assignee as a member, then re-read the card and
+   confirm they are its only member (remove anyone else).
 
 ## 5. Report
 

@@ -8,7 +8,7 @@ Claude Code skills for a Trello-driven workflow, with no project-specific settin
 | `assess-cards` | Reads Trello cards, posts questions only when a card can't be built safely, and moves those cards to Not Ready (or a Needs input list and owner the project names) |
 | `triage-cards` | Runs `assess-cards`, then `ship-cards` on the cards that are ready; `unattended` mode for scheduled runs |
 | `ship-cards` | Builds cards with sub-agents in worktrees, verifies, pushes (optionally bugs to production, features to staging), updates Trello and cleans up; a card that stops after it's built keeps its worktree, and the next run resumes it instead of rebuilding |
-| `add-card` | Turns one request into a Bug, Feature (with Acceptance Criteria) or manual Chore card in Ready To Start, filled in from the templates and assigned to you |
+| `add-card` | Turns one request into a Bug, Feature (with Acceptance Criteria) or manual Chore card in Ready To Start, filled in from the templates and always assigned to the card assignee (default: you) |
 | `add-multiple-cards` | Pulls bugs and features out of a transcript or notes, adds the clear ones with `add-card`, and asks about the ambiguous or vague ones |
 | `my-cards` | Read-only numbered list of your open cards: linked number, title, and one sentence on what's left |
 
@@ -29,7 +29,7 @@ cp -R skills/* /path/to/project/.claude/skills/
 The skills read project details from the project's CLAUDE.md. Add a section covering:
 
 - Trello board, its Not Ready / Ready To Start / Doing / Done lists, and a fallback reviewer for cards you create
-- For `add-card`: the bug and manual labels, optional Bug and Feature template cards, the app's base URL, and your Trello member id (also used by `my-cards`)
+- For `add-card`: the bug and manual labels, optional Bug and Feature template cards, the app's base URL, your Trello member id (also used by `my-cards`), and optionally a card assignee who gets every new card (defaults to you)
 - Optional: a separate Needs input list for cards with open questions (defaults to Not Ready) and a Needs input owner who becomes the only member of those cards
 - GitHub `<owner>/<repo>`, trunk branch, and any long-lived branch to keep in sync (e.g. `preview`)
 - Install, lint, typecheck, unit test, build and dev server commands, plus the ports agents may use
