@@ -17,8 +17,12 @@ them up once with the project's Trello tools:
   Ready To Start, then the not-ready and backlog lists in board order).
   Lists whose names say done, archive or canceled are closed and never
   shown.
-- The user's Trello member id, plus any old accounts of theirs whose cards
-  should also count.
+- **The user (get_me)**: always looked up at run time, never stored in
+  the settings: the Trello member the MCP calls are made as, from `get_me`
+  (the Trello connector's `trelloReadMember` `get_me`), or
+  `node automation/trello-me.mjs` (copied into the project) when the
+  project's Trello MCP has no get_me tool. Settings may list old accounts
+  of theirs whose cards also count.
 
 If the user names someone else ("Sam's cards"), use that person's member
 id from the board's members instead.

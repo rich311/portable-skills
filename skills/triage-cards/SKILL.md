@@ -168,7 +168,8 @@ through `ship-cards` like any other bug. Do this before step 1 in every run
 
 **Default scope.** If the user names no cards or list, triage the cards in
 Ready To Start where the user is the only member (the card's `idMembers` is
-exactly the user's id; a card that also has anyone else is skipped).
+exactly the user's id; a card that also has anyone else is skipped). The user is whoever get_me returns at run time (see
+`ship-cards` project settings), not a stored id.
 Anything the user writes (card names, numbers, URLs, a list or a filter)
 overrides this default. Pass the resolved card list to `assess-cards` and
 `ship-cards` explicitly.

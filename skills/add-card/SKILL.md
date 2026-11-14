@@ -31,7 +31,10 @@ members) and use the names below:
 - The **card assignee**: the member every new card is assigned to, as its
   only member, whoever runs the skill and whoever the request names as
   doing the work (that person can go in the description, never in the
-  members). Defaults to the user's Trello member id.
+  members). Defaults to the user. Everything else that means "the user"
+  (whose voice the card is in) uses get_me at run time: the Trello
+  connector's `trelloReadMember` `get_me`, or `automation/trello-me.mjs`
+  when the Trello MCP has no get_me tool.
 - The app's base URL, for bug reproduction steps.
 - Any services a person must handle by hand (vendor dashboards Claude has
   no access to), to help spot chores.

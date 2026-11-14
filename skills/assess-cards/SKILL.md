@@ -35,7 +35,12 @@ them up once (`trelloReadMember` `get_me` for the user,
 - Optional **Needs input owner**: the member who should be the only member
   of a card with open questions. If the settings don't name one, leave
   members as they are.
-- The user's Trello member id (whose voice the comments are in).
+- **The user (get_me)**: always looked up at run time, never stored in
+  the settings: the Trello member the MCP calls are made as, from `get_me`
+  (the Trello connector's `trelloReadMember` `get_me`), or
+  `node automation/trello-me.mjs` (copied into the project) when the
+  project's Trello MCP has no get_me tool. Settings may list old accounts
+  of theirs whose cards also count. The comments are in their voice.
 
 ## 1. Read each card in full
 

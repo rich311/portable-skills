@@ -73,7 +73,9 @@ it points to). Before starting, find each of these there; look up what's
 missing (Trello via `trelloReadBoard` / `trelloReadMember` `get_me`, commands
 via `package.json`) and only ask the user for what you can't find:
 - **Trello:** the board, its "Ready To Start", "Doing" and "Done" lists (or
-  the project's equivalents), the user's member id, and the **fallback
+  the project's equivalents), the user (always from get_me at run time:
+  `trelloReadMember` `get_me`, or `automation/trello-me.mjs` when the
+  Trello MCP has no get_me tool), and the **fallback
   reviewer** who gets a card when the user created it (if none is named,
   leave the user as the member).
 - **Repo:** the GitHub `<owner>/<repo>` for commit links, the trunk branch

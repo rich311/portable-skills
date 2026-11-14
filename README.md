@@ -29,7 +29,7 @@ cp -R skills/* /path/to/project/.claude/skills/
 The skills read project details from the project's CLAUDE.md. Add a section covering:
 
 - Trello board, its Not Ready / Ready To Start / Doing / Done lists, and a fallback reviewer for cards you create
-- For `add-card`: the bug and manual labels, optional Bug and Feature template cards, the app's base URL, your Trello member id (also used by `my-cards`), and optionally a card assignee who gets every new card (defaults to you)
+- For `add-card`: the bug and manual labels, optional Bug and Feature template cards, the app's base URL, and optionally a card assignee who gets every new card (defaults to you)
 - Optional: a separate Needs input list for cards with open questions (defaults to Not Ready) and a Needs input owner who becomes the only member of those cards
 - GitHub `<owner>/<repo>`, trunk branch, and any long-lived branch to keep in sync (e.g. `preview`)
 - Install, lint, typecheck, unit test, build and dev server commands, plus the ports agents may use
@@ -39,6 +39,8 @@ The skills read project details from the project's CLAUDE.md. Add a section cove
 - Whether pushing and production changes have standing approval (otherwise `ship-cards` asks first)
 - Optional cloud sessions: whether Claude Code on the web may run these skills, the non-production env keys its environment holds, and a marker that identifies production values (see `automation/cloud-setup.sh`)
 - Optional staged releases: a staging branch, the bug label, a "Done in staging" list, and the workflow that promotes staging to production
+
+"You" in every skill is whoever the Trello MCP is logged in as, looked up at run time with `get_me` (or `automation/trello-me.mjs` when the Trello MCP has no get_me tool), so the skills work for anyone on the team without editing settings.
 
 `repo-state/check.sh` takes `MAIN_BRANCH`, `KEEP_BRANCHES` (e.g. `"main preview"`) and `EXTRA_IGNORE` as env vars.
 
@@ -59,6 +61,7 @@ Files in `automation/` for this:
 | `cloud-setup.sh` | `scripts/cloud-setup.sh` | Writes the env file from an allowlist of the cloud environment's variables (refusing anything that matches the production marker) and installs dependencies. Does nothing on a Mac unless `--cloud` is passed. Settings come from `.claude/cloud-setup.conf` (see the script's header). |
 | `settings.json.example` | merge into `.claude/settings.json` | Runs `cloud-setup.sh` from a `SessionStart` hook (the environment's setup-script field doesn't run inside the clone) and allows the Trello tools, denying archive and delete. |
 | `mcp.json.example` | `.mcp.json` | Gives cloud sessions the Trello MCP server, reading its keys from the cloud environment's variables. |
+| `trello-me.mjs` | `scripts/` or keep in `automation/` | Prints the logged-in Trello member (`id`, `username`, `fullName`) for Trello MCP servers with no get_me tool. Keys from `TRELLO_API_KEY` / `TRELLO_TOKEN`, or the env of the MCP server named `TRELLO_MCP_SERVER` (default `trello`) in `~/.claude.json`; never prints them. |
 | `gh-workflow.mjs` | `scripts/gh-workflow.mjs` | Starts a workflow, waits, and prints its `RESULT:` line. Repo from `GH_REPO` or the git remote, token from `GITHUB_PAT`. |
 | `workflows/email-report.yml` | `.github/workflows/` | Emails the report with `send-report.py` (cloud networks may block SMTP). Needs `send-report.py` and `report_html.py` in the repo (default `.claude/automation/`). |
 | `workflows/apply-prod-migrations.yml` | `.github/workflows/` | Production migrations: exact-match dry run, re-check, apply, confirm nothing pending. Written for the Supabase CLI. |
