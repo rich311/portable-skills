@@ -10,6 +10,7 @@ Claude Code skills for a Trello-driven workflow, with no project-specific settin
 | `ship-cards` | Builds cards with sub-agents in worktrees, verifies, pushes (optionally bugs to production, features to staging), updates Trello and cleans up; a card that stops after it's built keeps its worktree, and the next run resumes it instead of rebuilding |
 | `add-card` | Turns one request into a Bug, Feature (with Acceptance Criteria) or manual Chore card in Ready To Start, filled in from the templates and always assigned to the card assignee (default: you) |
 | `add-multiple-cards` | Pulls bugs and features out of a transcript or notes, adds the clear ones with `add-card`, and asks about the ambiguous or vague ones |
+| `question` | Read-only: answers a question about how the app behaves from the code on the trunk (and staging, when it differs), in plain language with file references |
 | `my-cards` | Read-only numbered list of your open cards: linked number, title, and one sentence on what's left |
 
 With no cards named, `assess-cards`, `triage-cards` and `ship-cards` work on the Ready To Start cards where you are the only member.

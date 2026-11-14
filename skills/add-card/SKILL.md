@@ -68,6 +68,17 @@ duplicate; mention it in the new card's "Deeper explanation" as a link.
 
 ## 3. Fill in the template
 
+**Consult the repo before asking.** Whenever you're unsure how something
+works today or how it should work (which page or button the request means,
+what a role can see, what the current copy says, whether a behavior is a
+bug or intended), answer it from the repo first, the way the `question`
+skill does: read the code on the trunk branch (live) and, when the project
+has one, the staging branch, plus any docs the project's CLAUDE.md points
+to. Only ask the user what the repo can't settle (product intent, a choice
+between options, something only they saw). When the code shows the
+reported behavior is intended, say so to the user before creating a bug
+card.
+
 Use what the request says, plus a light look at the app so the card is
 concrete (a `grep` or two for the page, route, component or button label
 the request mentions; an `Explore` agent only if the area is unclear).

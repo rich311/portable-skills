@@ -58,6 +58,17 @@ not asked about or added.
 
 ## 3. Ask about the unclear ones
 
+**Consult the repo first.** Before asking about any candidate, settle what
+the repo can answer (add-card step 3, "Consult the repo before asking"):
+what the app does today, whether a reported bug is actually intended
+behavior, whether a proposed feature already exists (live on the trunk, or
+on staging when the project has it). A candidate the code already answers
+isn't a question: an existing feature is reported as
+`➖ Already in the app: <item> (<where>)`, intended behavior as
+`➖ Works as designed: <item> (<why>)`. Only ask what the repo can't
+settle, and put what the code shows into the question so the user can
+answer in one tap.
+
 If any candidates are in the two Ask buckets, ask with `AskUserQuestion`
 before creating anything from those buckets (the **Add** cards can be
 created first). Up to 4 questions per call; repeat until all are answered.
@@ -86,6 +97,7 @@ cards in the order they came up in the source.
 One line per item, no headings, in this order:
 - `✅ Added [#N](<url>) <name> (<Bug|Feature|Chore>)` for each new card
 - `➖ Already on the board: [#N](<url>) <name>`
+- `➖ Already in the app` / `➖ Works as designed` lines from step 3
 - `⏭️ Skipped: <item>` for items the user declined or answered Skip
 - If personal action items were skipped, one final line listing them in a
   few words each, so nothing from the call is lost: `Not added (personal
