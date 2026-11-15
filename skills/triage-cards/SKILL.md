@@ -91,6 +91,11 @@ quote that approval before pushing. In this mode:
   Cards Not Ready (<n>)
   ✅ #<n> <title> (<card url>): <q> questions to answer
 
+  Customer replies (<n>)
+  To: <reporter email>
+  Subject: <short subject>
+  <draft email body>
+
   ✅ Repo state clean
   ```
 
@@ -106,6 +111,18 @@ quote that approval before pushing. In this mode:
     user. (The hourly runner sends no email for a report that is only
     `✅ Nothing to do` and `✅ Repo state clean`.) Otherwise one `❌` line per failure: what failed, the card link if
     there is one, and what the user needs to do to fix it.
+  - Customer replies: one draft email per person for every shipped card a
+    user (not the team) reported, for example a card made by an in-app bug
+    reporter that records the reporter's email. Group all of one person's
+    shipped cards into one email; `<n>` counts emails, not cards. Write each
+    draft as the board owner, in plain words a user understands (no file
+    names, settings, migrations or internal numbers): thank them for
+    reporting it, say what was wrong and what changed, card by card. Only
+    call something live if it is in production; say a preview-only change
+    is coming soon. If part of a fix only shows up over time or isn't
+    confirmed yet, say so honestly. Greet them by first name when known,
+    otherwise `Hi there,`. Separate drafts with a blank line and `---`.
+    Cards Not Ready get no draft. Leave the section out when there are none.
   - Shipped to Prod holds cards pushed to production, Shipped to Preview
     cards pushed to the staging branch only (use the project's name for it),
     Cards Not Ready the Needs input, Still waiting and Blocked cards (for
