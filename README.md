@@ -12,6 +12,7 @@ Claude Code skills for a Trello-driven workflow, with no project-specific settin
 | `add-multiple-cards` | Pulls bugs and features out of a transcript or notes, adds the clear ones with `add-card`, and asks about the ambiguous or vague ones |
 | `question` | Read-only: answers a question about how the app behaves from the code on the trunk (and staging, when it differs), in plain language with file references |
 | `my-cards` | Read-only numbered list of your open cards: linked number, title, and one sentence on what's left |
+| `page-speed-check` | Speed audit of the non-production site: scripts in `tests/perf/` time every page for every role, up to 12 Sonnet agents time each area's functions, anything outside normal is re-measured, an Opus analyst finds the causes in the code, and the result is a report page plus bug cards. The first run generates the scripts; later runs reuse and repair them |
 
 With no cards named, `assess-cards`, `triage-cards` and `ship-cards` work on the Ready To Start cards where you are the only member.
 
@@ -23,7 +24,7 @@ Copy the folders you want into a project's `.claude/skills/` (or `~/.claude/skil
 cp -R skills/* /path/to/project/.claude/skills/
 ```
 
-`triage-cards` needs `assess-cards` and `ship-cards`; `ship-cards` needs `repo-state`; `add-multiple-cards` needs `add-card`.
+`triage-cards` needs `assess-cards` and `ship-cards`; `ship-cards` needs `repo-state`; `add-multiple-cards` needs `add-card`. `page-speed-check` stands alone (cards are optional) and keeps its scripts in the project's `tests/perf/`.
 
 ## Project settings
 
@@ -38,6 +39,7 @@ The skills read project details from the project's CLAUDE.md. Add a section cove
 - Non-production test accounts and the env var holding their password
 - Production and non-production database ids, and how migrations and data scripts do a dry run
 - Whether pushing and production changes have standing approval (otherwise `ship-cards` asks first)
+- For `page-speed-check`: the non-production site to test and how to tell it from production, how pages are discovered (routes folder, router file or sitemap), and how to create and delete a throwaway account
 - Optional cloud sessions: whether Claude Code on the web may run these skills, the non-production env keys its environment holds, and a marker that identifies production values (see `automation/cloud-setup.sh`)
 - Optional staged releases: a staging branch, the bug label, a "Done in staging" list, and the workflow that promotes staging to production
 
