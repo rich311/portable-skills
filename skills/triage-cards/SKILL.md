@@ -93,8 +93,10 @@ quote that approval before pushing. In this mode:
 
   Customer replies (<n>)
   To: <reporter email>
+  Cc: <team feedback address>
   Subject: <short subject>
   <draft email body>
+  Open in Gmail: <compose link>
 
   ✅ Repo state clean
   ```
@@ -125,6 +127,12 @@ quote that approval before pushing. In this mode:
     confirmed yet, say so honestly. Greet them by first name when known,
     otherwise `Hi there,`. Separate drafts with a blank line and `---`.
     Cards Not Ready get no draft. Leave the section out when there are none.
+    After each draft, add an `Open in Gmail:` line with a compose link that
+    fills everything in (cc the team's shared feedback address, if the project has one; otherwise drop the Cc line and `cc=`):
+    `https://mail.google.com/mail/?view=cm&fs=1&to=<to>&cc=<cc>&su=<subject>&body=<body>`,
+    each value percent-encoded with Python's `urllib.parse.quote(value,
+    safe="")` (line breaks become `%0A`). The body in the link is exactly the
+    draft's body, plain text only (no `**` or other markdown).
   - Shipped to Prod holds cards pushed to production, Shipped to Preview
     cards pushed to the staging branch only (use the project's name for it),
     Cards Not Ready the Needs input, Still waiting and Blocked cards (for
