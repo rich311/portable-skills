@@ -117,7 +117,9 @@ quote that approval before pushing. In this mode:
     shipped cards into one email; `<n>` counts emails, not cards. Write each
     draft as the board owner, in plain words a user understands (no file
     names, settings, migrations or internal numbers): thank them for
-    reporting it, say what was wrong and what changed, card by card. Only
+    reporting it, then one or two sentences per card on what was wrong and what changed.
+    Keep the whole email short (about 100 words for two cards): no preamble,
+    no restating their report, a one-line thanks and sign-off. Only
     call something live if it is in production; say a preview-only change
     is coming soon. If part of a fix only shows up over time or isn't
     confirmed yet, say so honestly. Greet them by first name when known,
