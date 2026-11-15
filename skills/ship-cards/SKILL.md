@@ -169,6 +169,28 @@ only.
 When a run has both kinds, ship the bug cards first (steps 4 to 6 on the
 trunk), then the feature cards on top of the freshly synced staging branch.
 
+**Bug fixes in files staging has changed.** A bug fix built from the trunk
+conflicts with any feature still waiting on the staging branch that touched
+the same file, and a conflict in a CI workflow, migration or env file stops
+the sync. So in step 1, for every bug card, list the files the fix will
+likely touch (the card's own file names plus a quick grep) and run
+`git diff --stat origin/<trunk> origin/<staging> -- <those files>`. When
+staging has changed any of them, read staging's version and decide before
+building, writing the decision into the agent prompt and the card's report
+line:
+- **Staging already fixes it** (the feature removed or rewrote the broken
+  code): still fix the trunk if production needs it now, but plan the sync
+  as "take staging's side of `<file>` and drop trunk-only tests of the code
+  staging removed". If production can wait for the next promotion, skip the
+  build, comment on the card which staging commit fixes it, and move it to
+  the Done in staging list instead.
+- **Staging still has the bug**: the agent writes the fix for both versions
+  in the same run (the trunk commit, plus the matching change to staging's
+  version applied in the step 6.3 sync merge).
+
+The planned resolution counts as this run's own, so step 6.3 resolves it
+even in a CI workflow file (see "Sync cards" there).
+
 ## 1. Gather and triage the cards
 
 1. Resolve the list. Card names/numbers/URLs from the user, or a whole list
@@ -523,7 +545,11 @@ dry run, don't make it:
    missing. Then verify as usual.
    **Sync cards.** Stop only when a conflicted file is a migration, an env
    file or a CI workflow, or verification still fails after the resolution.
-   Then don't log a manual chore: remove the sync worktree and branch and
+   One exception: a CI workflow conflict is resolved here when the trunk's
+   side of it is this run's own commit and step 1 planned the resolution
+   ("Bug fixes in files staging has changed"); apply exactly that plan,
+   verify as usual and name the file and resolution on the ⚠️ line.
+   Migrations and env files are never resolved here. Then don't log a manual chore: remove the sync worktree and branch and
    log (or reuse an open one) a card named `Sync: Merge main into <branch>
    (<why>)` in Ready To Start, the user as its only member, no manual
    label, saying which files conflicted, what each side changed and what

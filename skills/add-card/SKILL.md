@@ -112,6 +112,16 @@ steps from the code and say so ("Steps inferred from the app, not
 confirmed"). Note severity in the first line if it's obvious (blocks
 sign-up, payments or data loss).
 
+**With staged releases, check staging's version too.** Bugs ship from the
+trunk, but features wait on the staging branch, so the file may already
+look different there. For each file the bug points at, run
+`git fetch -q origin <trunk> <staging>` and
+`git diff --stat origin/<trunk> origin/<staging> -- <file>`. When staging
+differs, read its version and add one line under Actual Behavior:
+"Staging: <file> was changed by <commit or card>; <it still has the bug |
+it already fixes it>". When staging already fixes it, say so to the user
+before creating the card, since the fix may only need the next promotion.
+
 **Feature** (name: 3 to 6 words in title case, no prefix, plus any
 obvious area label the board has):
 
